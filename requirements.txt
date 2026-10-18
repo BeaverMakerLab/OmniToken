@@ -1,0 +1,6 @@
+# OmniToken Python Dependencies
+# Most components use Python standard library (tkinter, sqlite3, http.server, etc.)
+# The desktop widget requires Pillow for image rendering and pystray for system tray support.
+
+Pillow>=9.0.0
+pystray>=0.19.4

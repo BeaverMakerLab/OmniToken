@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# PyInstaller & Build artifacts
+build/
+dist/
+TokenMonitor-Release/
+*.zip
+*.spec
+
+# User local config & caches
+widget_config.json
+latest_data.json
+*.log
+.test_write
+
+# OS generated
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
