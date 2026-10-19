@@ -33,7 +33,7 @@ AGY_MODEL_MAP = {
     1319: "Gemini 3.8 Flash (Low)",
 }
 
-USD_TO_CNY = 7.20
+USD_TO_CNY = 7.25
 
 # 官方公开标准 API 单价 (单位: 美元 / 每 1,000,000 Tokens)
 # uncached: 未缓存输入单价, cached: 缓存命中输入单价, output: 输出单价 (含思考Token)
@@ -50,24 +50,33 @@ MODEL_PRICING = {
     "Gemini 1.5 Pro":          {"uncached": 1.25, "cached": 0.3125, "output": 5.00, "currency": "USD"},
 
     # --- OpenAI Codex 系列 ---
-    "gpt-6.1-sol":   {"uncached": 2.50, "cached": 1.25, "output": 10.00, "currency": "USD"},
-    "gpt-5.6-sol":   {"uncached": 2.50, "cached": 1.25, "output": 10.00, "currency": "USD"},
-    "gpt-6-sol":     {"uncached": 2.50, "cached": 1.25, "output": 10.00, "currency": "USD"},
     "gpt-6-astra":   {"uncached": 5.00, "cached": 2.50, "output": 20.00, "currency": "USD"},
+    "gpt-6.1-sol":   {"uncached": 2.50, "cached": 1.25, "output": 10.00, "currency": "USD"},
+    "gpt-6-sol":     {"uncached": 2.50, "cached": 1.25, "output": 10.00, "currency": "USD"},
+    "gpt-5.6-sol":   {"uncached": 2.50, "cached": 1.25, "output": 10.00, "currency": "USD"},
+    "gpt-5.6-terra": {"uncached": 1.00, "cached": 0.50, "output": 4.00, "currency": "USD"},
     "gpt-6-luna":    {"uncached": 0.15, "cached": 0.075, "output": 0.60, "currency": "USD"},
     "gpt-5.6-luna":  {"uncached": 0.15, "cached": 0.075, "output": 0.60, "currency": "USD"},
-    "gpt-5.6-terra": {"uncached": 1.00, "cached": 0.50, "output": 4.00, "currency": "USD"},
     "gpt-4o":        {"uncached": 2.50, "cached": 1.25, "output": 10.00, "currency": "USD"},
     "gpt-4o-mini":   {"uncached": 0.15, "cached": 0.075, "output": 0.60, "currency": "USD"},
     "o1":            {"uncached": 15.00, "cached": 7.50, "output": 60.00, "currency": "USD"},
     "o3-mini":       {"uncached": 1.10, "cached": 0.55, "output": 4.40, "currency": "USD"},
 
-    # --- DeepSeek 官方公布价 (折算为美元) ---
+    # --- DeepSeek 系列 ---
     "deepseek-flash":    {"uncached": 0.14, "cached": 0.014, "output": 0.28, "currency": "USD"},
+    "deepseek-v4-flash": {"uncached": 0.14, "cached": 0.014, "output": 0.28, "currency": "USD"},
     "deepseek-chat":     {"uncached": 0.14, "cached": 0.014, "output": 0.28, "currency": "USD"},
     "deepseek-v4-pro":   {"uncached": 0.55, "cached": 0.14, "output": 2.19, "currency": "USD"},
     "deepseek-reasoner": {"uncached": 0.55, "cached": 0.14, "output": 2.19, "currency": "USD"},
     "deepseek-r1":       {"uncached": 0.55, "cached": 0.14, "output": 2.19, "currency": "USD"},
+
+    # --- OpenCode 多模型接入 (国产模型 & 国际通用) ---
+    "glm-5.2":           {"uncached": 1.00, "cached": 0.20, "output": 2.00, "currency": "USD"},
+    "qwen3.7-max":       {"uncached": 2.50, "cached": 0.60, "output": 10.00, "currency": "USD"},
+    "minimax-m3":        {"uncached": 1.00, "cached": 0.25, "output": 4.00, "currency": "USD"},
+    "claude-opus-4-7":   {"uncached": 15.00, "cached": 3.75, "output": 75.00, "currency": "USD"},
+    "claude-3-7-sonnet": {"uncached": 3.00, "cached": 0.75, "output": 15.00, "currency": "USD"},
+    "claude-3-5-sonnet": {"uncached": 3.00, "cached": 0.75, "output": 15.00, "currency": "USD"},
 }
 
 def get_pricing_for_model(model_name: str) -> dict:
@@ -157,7 +166,7 @@ def scan_antigravity(gemini_dir: str, start_ts: float, end_ts: float):
                     mtime = max(mtime, wal_m)
                 except Exception:
                     pass
-            if len(dbs) > 500 and mtime < (start_ts - 300):
+            if start_ts > 0 and mtime < (start_ts - 300):
                 continue
 
             app = "CLI" if "antigravity-cli" in db_path else ("IDE" if "antigravity-ide" in db_path else "Desktop")
@@ -309,7 +318,7 @@ def scan_codex(codex_dir: str, start_ts: float, end_ts: float):
             # 因此使用 state_*.sqlite 的 updated_at 与文件 mtime 两者最大值作为有效时间；
             # 且当会话文件总数较少时（<= 200 个），直接全量进入精确时间戳解析，彻底防止漏统！
             effective_mtime = max(mtime, thread_updated)
-            if len(all_files) > 200 and effective_mtime < (start_ts - 300):
+            if start_ts > 0 and effective_mtime < (start_ts - 300):
                 continue
 
             is_subagent = False
@@ -492,7 +501,7 @@ def scan_deepseek(dsh_dir: str, start_ts: float, end_ts: float):
     for fpath in session_files:
         try:
             mtime = os.path.getmtime(fpath)
-            if len(session_files) > 200 and mtime < (start_ts - 300):
+            if start_ts > 0 and mtime < (start_ts - 300):
                 continue
 
             parent_dir = os.path.basename(os.path.dirname(fpath))
@@ -676,6 +685,96 @@ def scan_deepseek(dsh_dir: str, start_ts: float, end_ts: float):
 
     return records, convo_stats
 
+def scan_opencode(opencode_db=None, start_ts=0, end_ts=9999999999):
+    if not opencode_db:
+        opencode_db = os.path.expanduser(os.path.join("~", ".local", "share", "opencode", "opencode.db"))
+    if not os.path.isfile(opencode_db):
+        return [], defaultdict(dict)
+
+    records = []
+    convo_stats = defaultdict(lambda: {
+        "calls": 0, "uncached_in": 0, "cached_in": 0, "total_in": 0,
+        "cand_out": 0, "thinking": 0, "text_out": 0, "model": "", "title": "",
+        "client": "OpenCode", "app": "OpenCode", "cost_usd": 0.0
+    })
+
+    try:
+        conn = sqlite3.connect(f"file:{os.path.abspath(opencode_db)}?mode=ro", uri=True)
+        cursor = conn.cursor()
+
+        session_map = {}
+        for r in cursor.execute("SELECT id, title, model FROM session").fetchall():
+            m_info = json.loads(r[2]) if r[2] and r[2].startswith('{') else {"id": r[2] or "unknown"}
+            session_map[r[0]] = {"title": r[1] or "(无标题会话)", "model": m_info.get("id", "unknown")}
+
+        start_ms = start_ts * 1000.0 if start_ts > 0 else 0
+        end_ms = end_ts * 1000.0 if end_ts < 9999999999 else 9999999999999
+
+        rows = cursor.execute(
+            "SELECT m.id, m.session_id, m.time_created, m.data FROM message m WHERE m.time_created >= ? AND m.time_created <= ?",
+            (start_ms, end_ms)
+        ).fetchall()
+
+        for r in rows:
+            try:
+                if not r[3]: continue
+                d = json.loads(r[3])
+                tok = d.get("tokens")
+                if not tok: continue
+                u_in = tok.get("input", 0)
+                c_in = tok.get("cache", {}).get("read", 0)
+                c_out = tok.get("output", 0)
+                thinking = tok.get("reasoning", 0)
+                if (u_in + c_in + c_out) == 0: continue
+
+                ts = r[2] / 1000.0
+                dt = datetime.datetime.fromtimestamp(ts)
+                s_info = session_map.get(r[1], {"title": "(未知会话)", "model": "unknown"})
+                m_name = s_info["model"]
+                cost_usd = calc_cost(u_in, c_in, c_out, m_name)
+
+                rec = {
+                    "ts": ts,
+                    "dt_str": dt.strftime("%Y-%m-%d %H:%M:%S"),
+                    "day": dt.strftime("%Y-%m-%d"),
+                    "hour": dt.strftime("%Y-%m-%d %H:00"),
+                    "client": "OpenCode",
+                    "app": "OpenCode",
+                    "convo_id": r[1],
+                    "title": s_info["title"],
+                    "model": m_name,
+                    "uncached_in": u_in,
+                    "cached_in": c_in,
+                    "total_in": u_in + c_in,
+                    "cand_out": c_out,
+                    "thinking": thinking,
+                    "text_out": c_out,
+                    "total": u_in + c_in + c_out,
+                    "cost_usd": cost_usd
+                }
+                records.append(rec)
+
+                cs = convo_stats[r[1]]
+                cs["calls"] += 1
+                cs["uncached_in"] += u_in
+                cs["cached_in"] += c_in
+                cs["total_in"] += (u_in + c_in)
+                cs["cand_out"] += c_out
+                cs["thinking"] += thinking
+                cs["text_out"] += c_out
+                cs["client"] = "OpenCode"
+                cs["app"] = "OpenCode"
+                cs["model"] = m_name
+                cs["title"] = s_info["title"]
+                cs["cost_usd"] += cost_usd
+            except Exception:
+                pass
+        conn.close()
+    except Exception:
+        pass
+
+    return records, convo_stats
+
 def aggregate_data(records, convo_stats, default_client=""):
     tot_calls = len(records)
     tot_uncached_in = sum(r["uncached_in"] for r in records)
@@ -805,13 +904,88 @@ def aggregate_data(records, convo_stats, default_client=""):
         "top_convos": top_convos,
     }
 
-def get_combined_stats(gemini_dir=None, codex_dir=None, dsh_dir=None, start_dt=None, end_dt=None, granularity="auto"):
+def get_cache_file():
+    base_dir = os.path.expanduser(os.path.join("~", ".gemini", "antigravity"))
+    if not os.path.isdir(base_dir):
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_dir, "token_history_cache.json")
+
+def load_history_cache(yesterday_str: str):
+    cache_path = get_cache_file()
+    if not os.path.isfile(cache_path):
+        return None
+    try:
+        with open(cache_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if data.get("version") == 1 and data.get("last_cached_day", "") >= yesterday_str:
+                return data
+    except Exception:
+        pass
+    return None
+
+def save_history_cache(cache_data):
+    cache_path = get_cache_file()
+    try:
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        temp_path = cache_path + ".tmp"
+        with open(temp_path, "w", encoding="utf-8") as f:
+            json.dump(cache_data, f, ensure_ascii=False)
+        if os.path.exists(cache_path):
+            try:
+                os.remove(cache_path)
+            except Exception:
+                pass
+        os.rename(temp_path, cache_path)
+    except Exception:
+        pass
+
+def merge_convo_stats(hist_convos, today_convos):
+    merged = defaultdict(lambda: {
+        "calls": 0, "uncached_in": 0, "cached_in": 0, "total_in": 0,
+        "cand_out": 0, "thinking": 0, "text_out": 0, "app": "", "client": "", "title": "", "model": "", "cost_usd": 0.0
+    })
+    for cid, s in (hist_convos or {}).items():
+        m = merged[cid]
+        m["calls"] += s.get("calls", 0)
+        m["uncached_in"] += s.get("uncached_in", 0)
+        m["cached_in"] += s.get("cached_in", 0)
+        m["total_in"] += s.get("total_in", 0)
+        m["cand_out"] += s.get("cand_out", 0)
+        m["thinking"] += s.get("thinking", 0)
+        m["text_out"] += s.get("text_out", 0)
+        m["cost_usd"] += s.get("cost_usd", 0.0)
+        if s.get("title"): m["title"] = s["title"]
+        if s.get("model"): m["model"] = s["model"]
+        if s.get("client"): m["client"] = s["client"]
+        if s.get("app"): m["app"] = s["app"]
+
+    for cid, s in (today_convos or {}).items():
+        m = merged[cid]
+        m["calls"] += s.get("calls", 0)
+        m["uncached_in"] += s.get("uncached_in", 0)
+        m["cached_in"] += s.get("cached_in", 0)
+        m["total_in"] += s.get("total_in", 0)
+        m["cand_out"] += s.get("cand_out", 0)
+        m["thinking"] += s.get("thinking", 0)
+        m["text_out"] += s.get("text_out", 0)
+        m["cost_usd"] += s.get("cost_usd", 0.0)
+        if s.get("title"): m["title"] = s["title"]
+        if s.get("model"): m["model"] = s["model"]
+        if s.get("client"): m["client"] = s["client"]
+        if s.get("app"): m["app"] = s["app"]
+    return merged
+
+def get_combined_stats(gemini_dir=None, codex_dir=None, dsh_dir=None, opencode_db=None, start_dt=None, end_dt=None, granularity="auto", force_full=False, exchange_rate=None):
     if not gemini_dir:
         gemini_dir = os.path.expanduser(os.path.join("~", ".gemini"))
     if not codex_dir:
         codex_dir = os.path.expanduser(os.path.join("~", ".codex"))
     if not dsh_dir:
         dsh_dir = os.path.expanduser(os.path.join("~", ".dsh"))
+    if not opencode_db:
+        opencode_db = os.path.expanduser(os.path.join("~", ".local", "share", "opencode", "opencode.db"))
+
+    rate = float(exchange_rate) if exchange_rate else USD_TO_CNY
 
     now = datetime.datetime.now()
     if not end_dt: end_dt = now
@@ -820,59 +994,145 @@ def get_combined_stats(gemini_dir=None, codex_dir=None, dsh_dir=None, start_dt=N
     start_ts = start_dt.timestamp()
     end_ts = end_dt.timestamp()
 
-    agy_recs, agy_convos = scan_antigravity(gemini_dir, start_ts, end_ts)
-    codex_recs, codex_convos, rate_limits = scan_codex(codex_dir, start_ts, end_ts)
-    dsh_recs, dsh_convos = scan_deepseek(dsh_dir, start_ts, end_ts)
+    today_start_dt = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start_ts = today_start_dt.timestamp()
+    today_str = today_start_dt.strftime("%Y-%m-%d")
+    yesterday_str = (today_start_dt - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+
+    is_today_only = (start_ts >= today_start_ts - 1)
+
+    if is_today_only:
+        # 1. 纯今日请求：仅扫描今日活跃文件，瞬时响应 (< 20ms)
+        agy_recs, agy_convos = scan_antigravity(gemini_dir, today_start_ts, end_ts)
+        codex_recs, codex_convos, rate_limits = scan_codex(codex_dir, today_start_ts, end_ts)
+        dsh_recs, dsh_convos = scan_deepseek(dsh_dir, today_start_ts, end_ts)
+        opencode_recs, opencode_convos = scan_opencode(opencode_db, today_start_ts, end_ts)
+    else:
+        # 2. 跨天历史区间：读取历史缓存 + 扫描今日实时增量
+        cached_data = None if force_full else load_history_cache(yesterday_str)
+
+        if cached_data:
+            # 命中历史有效缓存！
+            hist_agy = [r for r in cached_data.get("agy_recs", []) if r["ts"] >= start_ts]
+            hist_codex = [r for r in cached_data.get("codex_recs", []) if r["ts"] >= start_ts]
+            hist_dsh = [r for r in cached_data.get("dsh_recs", []) if r["ts"] >= start_ts]
+            hist_opencode = [r for r in cached_data.get("opencode_recs", []) if r["ts"] >= start_ts]
+
+            # 扫描今日实时增量
+            today_agy_recs, today_agy_convos = scan_antigravity(gemini_dir, today_start_ts, end_ts)
+            today_codex_recs, today_codex_convos, rate_limits = scan_codex(codex_dir, today_start_ts, end_ts)
+            today_dsh_recs, today_dsh_convos = scan_deepseek(dsh_dir, today_start_ts, end_ts)
+            today_opencode_recs, today_opencode_convos = scan_opencode(opencode_db, today_start_ts, end_ts)
+
+            # 内存秒级拼接
+            agy_recs = hist_agy + today_agy_recs
+            codex_recs = hist_codex + today_codex_recs
+            dsh_recs = hist_dsh + today_dsh_recs
+            opencode_recs = hist_opencode + today_opencode_recs
+
+            valid_agy_cids = {r["convo_id"] for r in agy_recs}
+            hist_agy_convos = {cid: s for cid, s in cached_data.get("agy_convos", {}).items() if cid in valid_agy_cids}
+            agy_convos = merge_convo_stats(hist_agy_convos, today_agy_convos)
+
+            valid_codex_cids = {r["convo_id"] for r in codex_recs}
+            hist_codex_convos = {cid: s for cid, s in cached_data.get("codex_convos", {}).items() if cid in valid_codex_cids}
+            codex_convos = merge_convo_stats(hist_codex_convos, today_codex_convos)
+
+            valid_dsh_cids = {r["convo_id"] for r in dsh_recs}
+            hist_dsh_convos = {cid: s for cid, s in cached_data.get("dsh_convos", {}).items() if cid in valid_dsh_cids}
+            dsh_convos = merge_convo_stats(hist_dsh_convos, today_dsh_convos)
+
+            valid_opencode_cids = {r["convo_id"] for r in opencode_recs}
+            hist_opencode_convos = {cid: s for cid, s in cached_data.get("opencode_convos", {}).items() if cid in valid_opencode_cids}
+            opencode_convos = merge_convo_stats(hist_opencode_convos, today_opencode_convos)
+        else:
+            # 缓存未命中或用户请求全局全量重建：全量深度遍历并持久化历史缓存
+            full_start_ts = 0.0
+            all_agy_recs, all_agy_convos = scan_antigravity(gemini_dir, full_start_ts, end_ts)
+            all_codex_recs, all_codex_convos, rate_limits = scan_codex(codex_dir, full_start_ts, end_ts)
+            all_dsh_recs, all_dsh_convos = scan_deepseek(dsh_dir, full_start_ts, end_ts)
+            all_opencode_recs, all_opencode_convos = scan_opencode(opencode_db, full_start_ts, end_ts)
+
+            # 持久化所有截止到昨天的不可变历史记录
+            cache_to_save = {
+                "version": 1,
+                "last_cached_day": yesterday_str,
+                "saved_at": now.strftime("%Y-%m-%d %H:%M:%S"),
+                "agy_recs": [r for r in all_agy_recs if r["day"] < today_str],
+                "codex_recs": [r for r in all_codex_recs if r["day"] < today_str],
+                "dsh_recs": [r for r in all_dsh_recs if r["day"] < today_str],
+                "opencode_recs": [r for r in all_opencode_recs if r["day"] < today_str],
+                "agy_convos": {cid: dict(s) for cid, s in all_agy_convos.items() if any(r["day"] < today_str for r in all_agy_recs if r["convo_id"] == cid)},
+                "codex_convos": {cid: dict(s) for cid, s in all_codex_convos.items() if any(r["day"] < today_str for r in all_codex_recs if r["convo_id"] == cid)},
+                "dsh_convos": {cid: dict(s) for cid, s in all_dsh_convos.items() if any(r["day"] < today_str for r in all_dsh_recs if r["convo_id"] == cid)},
+                "opencode_convos": {cid: dict(s) for cid, s in all_opencode_convos.items() if any(r["day"] < today_str for r in all_opencode_recs if r["convo_id"] == cid)},
+            }
+            save_history_cache(cache_to_save)
+
+            agy_recs = [r for r in all_agy_recs if r["ts"] >= start_ts]
+            codex_recs = [r for r in all_codex_recs if r["ts"] >= start_ts]
+            dsh_recs = [r for r in all_dsh_recs if r["ts"] >= start_ts]
+            opencode_recs = [r for r in all_opencode_recs if r["ts"] >= start_ts]
+
+            agy_convos = {cid: s for cid, s in all_agy_convos.items() if any(r["convo_id"] == cid for r in agy_recs)}
+            codex_convos = {cid: s for cid, s in all_codex_convos.items() if any(r["convo_id"] == cid for r in codex_recs)}
+            dsh_convos = {cid: s for cid, s in all_dsh_convos.items() if any(r["convo_id"] == cid for r in dsh_recs)}
+            opencode_convos = {cid: s for cid, s in all_opencode_convos.items() if any(r["convo_id"] == cid for r in opencode_recs)}
 
     agy_stats = aggregate_data(agy_recs, agy_convos, default_client="Antigravity")
     codex_stats = aggregate_data(codex_recs, codex_convos, default_client="Codex")
     dsh_stats = aggregate_data(dsh_recs, dsh_convos, default_client="DeepSeek")
+    opencode_stats = aggregate_data(opencode_recs, opencode_convos, default_client="OpenCode")
 
-    comb_tot = agy_stats["summary"]["total_tokens"] + codex_stats["summary"]["total_tokens"] + dsh_stats["summary"]["total_tokens"]
-    comb_calls = agy_stats["summary"]["total_calls"] + codex_stats["summary"]["total_calls"] + dsh_stats["summary"]["total_calls"]
-    comb_in = agy_stats["summary"]["input_tokens"] + codex_stats["summary"]["input_tokens"] + dsh_stats["summary"]["input_tokens"]
-    comb_cached = agy_stats["summary"]["cached_tokens"] + codex_stats["summary"]["cached_tokens"] + dsh_stats["summary"]["cached_tokens"]
-    comb_uncached = agy_stats["summary"]["uncached_tokens"] + codex_stats["summary"]["uncached_tokens"] + dsh_stats["summary"]["uncached_tokens"]
-    comb_out = agy_stats["summary"]["output_tokens"] + codex_stats["summary"]["output_tokens"] + dsh_stats["summary"]["output_tokens"]
-    comb_thinking = agy_stats["summary"]["thinking_tokens"] + codex_stats["summary"]["thinking_tokens"] + dsh_stats["summary"]["thinking_tokens"]
+    comb_tot = agy_stats["summary"]["total_tokens"] + codex_stats["summary"]["total_tokens"] + dsh_stats["summary"]["total_tokens"] + opencode_stats["summary"]["total_tokens"]
+    comb_calls = agy_stats["summary"]["total_calls"] + codex_stats["summary"]["total_calls"] + dsh_stats["summary"]["total_calls"] + opencode_stats["summary"]["total_calls"]
+    comb_in = agy_stats["summary"]["input_tokens"] + codex_stats["summary"]["input_tokens"] + dsh_stats["summary"]["input_tokens"] + opencode_stats["summary"]["input_tokens"]
+    comb_cached = agy_stats["summary"]["cached_tokens"] + codex_stats["summary"]["cached_tokens"] + dsh_stats["summary"]["cached_tokens"] + opencode_stats["summary"]["cached_tokens"]
+    comb_uncached = agy_stats["summary"]["uncached_tokens"] + codex_stats["summary"]["uncached_tokens"] + dsh_stats["summary"]["uncached_tokens"] + opencode_stats["summary"]["uncached_tokens"]
+    comb_out = agy_stats["summary"]["output_tokens"] + codex_stats["summary"]["output_tokens"] + dsh_stats["summary"]["output_tokens"] + opencode_stats["summary"]["output_tokens"]
+    comb_thinking = agy_stats["summary"]["thinking_tokens"] + codex_stats["summary"]["thinking_tokens"] + dsh_stats["summary"]["thinking_tokens"] + opencode_stats["summary"]["thinking_tokens"]
     comb_ratio = round(comb_cached / comb_in * 100, 2) if comb_in > 0 else 0.0
 
-    comb_cost_usd = round(agy_stats["summary"].get("cost_usd", 0.0) + codex_stats["summary"].get("cost_usd", 0.0) + dsh_stats["summary"].get("cost_usd", 0.0), 4)
-    comb_cost_cny = round(comb_cost_usd * USD_TO_CNY, 4)
+    comb_cost_usd = round(agy_stats["summary"].get("cost_usd", 0.0) + codex_stats["summary"].get("cost_usd", 0.0) + dsh_stats["summary"].get("cost_usd", 0.0) + opencode_stats["summary"].get("cost_usd", 0.0), 4)
+    comb_cost_cny = round(comb_cost_usd * rate, 4)
 
     # 1. 连续日级别时间线 (Daily Timeline)
-    all_days = sorted(set(list(agy_stats["by_day"].keys()) + list(codex_stats["by_day"].keys()) + list(dsh_stats["by_day"].keys())))
+    all_days = sorted(set(list(agy_stats["by_day"].keys()) + list(codex_stats["by_day"].keys()) + list(dsh_stats["by_day"].keys()) + list(opencode_stats["by_day"].keys())))
     combined_days = []
     for d in all_days:
         ad = agy_stats["by_day"].get(d, {"total": 0, "calls": 0, "in": 0, "cached": 0, "out": 0, "cost_usd": 0.0, "cost_cny": 0.0})
         cd = codex_stats["by_day"].get(d, {"total": 0, "calls": 0, "in": 0, "cached": 0, "out": 0, "cost_usd": 0.0, "cost_cny": 0.0})
         dd = dsh_stats["by_day"].get(d, {"total": 0, "calls": 0, "in": 0, "cached": 0, "out": 0, "cost_usd": 0.0, "cost_cny": 0.0})
-        tot_d_usd = round(ad.get("cost_usd", 0.0) + cd.get("cost_usd", 0.0) + dd.get("cost_usd", 0.0), 4)
+        od = opencode_stats["by_day"].get(d, {"total": 0, "calls": 0, "in": 0, "cached": 0, "out": 0, "cost_usd": 0.0, "cost_cny": 0.0})
+        tot_d_usd = round(ad.get("cost_usd", 0.0) + cd.get("cost_usd", 0.0) + dd.get("cost_usd", 0.0) + od.get("cost_usd", 0.0), 4)
         combined_days.append({
             "date": d,
             "label": d[5:], # MM-DD
-            "total": ad["total"] + cd["total"] + dd["total"],
+            "total": ad["total"] + cd["total"] + dd["total"] + od["total"],
             "agy_total": ad["total"],
             "codex_total": cd["total"],
             "dsh_total": dd["total"],
+            "opencode_total": od["total"],
             "agy_calls": ad["calls"],
             "codex_calls": cd["calls"],
             "dsh_calls": dd["calls"],
+            "opencode_calls": od["calls"],
             "cost_usd": tot_d_usd,
-            "cost_cny": round(tot_d_usd * USD_TO_CNY, 4),
+            "cost_cny": round(tot_d_usd * rate, 4),
             "agy_cost_usd": ad.get("cost_usd", 0.0),
             "codex_cost_usd": cd.get("cost_usd", 0.0),
             "dsh_cost_usd": dd.get("cost_usd", 0.0),
+            "opencode_cost_usd": od.get("cost_usd", 0.0),
         })
 
     # 2. 连续逐小时时间线 (Hourly Timeline)
     span_hours = (end_dt - start_dt).total_seconds() / 3600.0
-    is_today_only = (start_dt.date() == end_dt.date() and span_hours <= 24.5)
+    is_today_only_view = (start_dt.date() == end_dt.date() and span_hours <= 24.5)
 
     hourly_timeline = []
     cur_h = start_dt.replace(minute=0, second=0, microsecond=0)
     end_h = end_dt.replace(minute=0, second=0, microsecond=0)
-    if is_today_only:
+    if is_today_only_view:
         end_h = start_dt.replace(hour=23, minute=0, second=0, microsecond=0)
 
     while cur_h <= end_h:
@@ -880,13 +1140,12 @@ def get_combined_stats(gemini_dir=None, codex_dir=None, dsh_dir=None, start_dt=N
         ah = agy_stats["by_hour"].get(k, {"total": 0, "calls": 0, "in": 0, "cached": 0, "out": 0, "cost_usd": 0.0, "cost_cny": 0.0})
         ch = codex_stats["by_hour"].get(k, {"total": 0, "calls": 0, "in": 0, "cached": 0, "out": 0, "cost_usd": 0.0, "cost_cny": 0.0})
         dh = dsh_stats["by_hour"].get(k, {"total": 0, "calls": 0, "in": 0, "cached": 0, "out": 0, "cost_usd": 0.0, "cost_cny": 0.0})
-        tot_h_usd = round(ah.get("cost_usd", 0.0) + ch.get("cost_usd", 0.0) + dh.get("cost_usd", 0.0), 4)
+        oh = opencode_stats["by_hour"].get(k, {"total": 0, "calls": 0, "in": 0, "cached": 0, "out": 0, "cost_usd": 0.0, "cost_cny": 0.0})
+        tot_h_usd = round(ah.get("cost_usd", 0.0) + ch.get("cost_usd", 0.0) + dh.get("cost_usd", 0.0) + oh.get("cost_usd", 0.0), 4)
 
-        if is_today_only:
+        if is_today_only_view:
             label = cur_h.strftime("%H:00")
-        elif span_hours <= 73: # 3天
-            label = cur_h.strftime("%m-%d %H:00")
-        else: # 7天
+        else:
             label = cur_h.strftime("%m-%d %H:00")
 
         hourly_timeline.append({
@@ -894,18 +1153,21 @@ def get_combined_stats(gemini_dir=None, codex_dir=None, dsh_dir=None, start_dt=N
             "date": cur_h.strftime("%Y-%m-%d"),
             "hour": cur_h.hour,
             "label": label,
-            "total": ah["total"] + ch["total"] + dh["total"],
+            "total": ah["total"] + ch["total"] + dh["total"] + oh["total"],
             "agy_total": ah["total"],
             "codex_total": ch["total"],
             "dsh_total": dh["total"],
+            "opencode_total": oh["total"],
             "agy_calls": ah["calls"],
             "codex_calls": ch["calls"],
             "dsh_calls": dh["calls"],
+            "opencode_calls": oh["calls"],
             "cost_usd": tot_h_usd,
-            "cost_cny": round(tot_h_usd * USD_TO_CNY, 4),
+            "cost_cny": round(tot_h_usd * rate, 4),
             "agy_cost_usd": ah.get("cost_usd", 0.0),
             "codex_cost_usd": ch.get("cost_usd", 0.0),
             "dsh_cost_usd": dh.get("cost_usd", 0.0),
+            "opencode_cost_usd": oh.get("cost_usd", 0.0),
         })
         cur_h += datetime.timedelta(hours=1)
 
@@ -953,6 +1215,19 @@ def get_combined_stats(gemini_dir=None, codex_dir=None, dsh_dir=None, start_dt=N
         all_models[m]["pricing"] = v.get("pricing", {})
         all_models[m]["clients"].add("DeepSeek")
 
+    for m, v in opencode_stats["by_model"].items():
+        all_models[m]["calls"] += v["calls"]
+        all_models[m]["total"] += v["total"]
+        all_models[m]["in"] += v["in"]
+        all_models[m]["cached"] += v["cached"]
+        all_models[m]["uncached"] += v.get("uncached", 0)
+        all_models[m]["out"] += v["out"]
+        all_models[m]["thinking"] += v["thinking"]
+        all_models[m]["cost_usd"] += v.get("cost_usd", 0.0)
+        all_models[m]["cost_cny"] += v.get("cost_cny", 0.0)
+        all_models[m]["pricing"] = v.get("pricing", {})
+        all_models[m]["clients"].add("OpenCode")
+
     all_models_dict = {}
     for m, d in sorted(all_models.items(), key=lambda x: x[1]["cost_usd"], reverse=True):
         all_models_dict[m] = {
@@ -964,14 +1239,14 @@ def get_combined_stats(gemini_dir=None, codex_dir=None, dsh_dir=None, start_dt=N
             "out": d["out"],
             "thinking": d["thinking"],
             "cost_usd": round(d["cost_usd"], 4),
-            "cost_cny": round(d["cost_cny"], 4),
+            "cost_cny": round(d["cost_usd"] * rate, 4),
             "pricing": d["pricing"],
             "client": "/".join(sorted(d["clients"]))
         }
 
     # 合并跨引擎所有高频活跃会话排行
     combined_top_convos = sorted(
-        agy_stats.get("top_convos", []) + codex_stats.get("top_convos", []) + dsh_stats.get("top_convos", []),
+        agy_stats.get("top_convos", []) + codex_stats.get("top_convos", []) + dsh_stats.get("top_convos", []) + opencode_stats.get("top_convos", []),
         key=lambda x: x["total_tokens"],
         reverse=True
     )[:15]
@@ -1002,11 +1277,12 @@ def get_combined_stats(gemini_dir=None, codex_dir=None, dsh_dir=None, start_dt=N
             "thinking_tokens": comb_thinking,
             "cost_usd": comb_cost_usd,
             "cost_cny": comb_cost_cny,
-            "exchange_rate": USD_TO_CNY,
+            "exchange_rate": rate,
         },
         "antigravity": agy_stats,
         "codex": codex_stats,
         "deepseek": dsh_stats,
+        "opencode": opencode_stats,
         "all_models": all_models_dict,
         "combined_top_convos": combined_top_convos,
         "rate_limits": rate_limits,

@@ -93,6 +93,8 @@ class TokenDashboardHandler(SimpleHTTPRequestHandler):
             start_str = qs.get("start", [None])[0]
             end_str = qs.get("end", [None])[0]
             granularity = qs.get("granularity", [None])[0]
+            force_param = qs.get("force", [None])[0]
+            force_full = force_param in ("1", "true", "True", "yes")
 
             now = datetime.datetime.now()
             if is_all:
@@ -123,7 +125,8 @@ class TokenDashboardHandler(SimpleHTTPRequestHandler):
             data = token_core.get_combined_stats(
                 start_dt=start_dt,
                 end_dt=end_dt,
-                granularity=granularity or "auto"
+                granularity=granularity or "auto",
+                force_full=force_full
             )
             payload = json.dumps(data, ensure_ascii=False).encode("utf-8")
 
@@ -150,57 +153,60 @@ def find_available_port(preferred_port=8765):
                 return p
     return preferred_port
 
-def run_cli(start_dt, end_dt, granularity="auto"):
-    data = token_core.get_combined_stats(start_dt=start_dt, end_dt=end_dt, granularity=granularity)
+def run_cli(start_dt, end_dt, granularity="auto", force_full=False):
+    data = token_core.get_combined_stats(start_dt=start_dt, end_dt=end_dt, granularity=granularity, force_full=force_full)
     comb = data["combined_summary"]
     agy = data["antigravity"]["summary"]
     codex = data["codex"]["summary"]
     dsh = data.get("deepseek", {}).get("summary", {"total_tokens": 0, "cache_ratio": 0.0, "total_calls": 0})
+    opencode = data.get("opencode", {}).get("summary", {"total_tokens": 0, "cache_ratio": 0.0, "total_calls": 0})
 
-    print("=" * 86)
-    print(" 本机 Antigravity, OpenAI Codex & DeepSeek Harness Token 消耗综合统计")
+    print("=" * 106)
+    print(" 本机 Antigravity, OpenAI Codex, DeepSeek Harness & OpenCode Token 消耗综合统计")
     print(f" 时间范围: {data['range']['start']}  至  {data['range']['end']}")
-    print(f" 统计粒度: {'逐小时 (Hourly)' if data['granularity'] == 'hourly' else '按天 (Daily)'}")
-    print("=" * 86)
+    print(f" 统计粒度: {'逐小时 (Hourly)' if data['granularity'] == 'hourly' else '按天 (Daily)'} | 折算汇率: 1 USD = {comb.get('exchange_rate', 7.25)} CNY")
+    print("=" * 106)
     print("[全机消耗总览]")
     print(f"  * 全机总消耗 Token    : {comb['total_tokens']:>15,} tokens (约 {comb['total_tokens']/1e6:.2f} M / {comb['total_tokens']/1e8:.2f} 亿)")
     print(f"  * 预估产生总费用      : ${comb.get('cost_usd', 0.0):>14.2f} (约 ¥{comb.get('cost_cny', 0.0):>10.2f} RMB)")
     print(f"  * 缓存命中总量 (Cache): {comb['cached_tokens']:>15,} tokens (缓存率: {comb['cache_ratio']}%)")
     print(f"  * 思考推理总量 (Think): {comb['thinking_tokens']:>15,} tokens")
     print(f"  * 交互调用总次数      : {comb['total_calls']:>15,} 次")
-    print("-" * 86)
-    print("[三客户端对比]")
+    print("-" * 106)
+    print("[四客户端对比]")
     print(f"  * Antigravity : {agy['total_tokens']:>14,} tokens ({agy['total_tokens']/max(1,comb['total_tokens'])*100:>5.1f}%) | 费用: ${agy.get('cost_usd', 0.0):>7.2f} (¥{agy.get('cost_cny', 0.0):>7.2f}) | 缓存率: {agy['cache_ratio']:>5.1f}% | 调用: {agy['total_calls']:>5} 次")
     print(f"  * OpenAI Codex: {codex['total_tokens']:>14,} tokens ({codex['total_tokens']/max(1,comb['total_tokens'])*100:>5.1f}%) | 费用: ${codex.get('cost_usd', 0.0):>7.2f} (¥{codex.get('cost_cny', 0.0):>7.2f}) | 缓存率: {codex['cache_ratio']:>5.1f}% | 调用: {codex['total_calls']:>5} 次")
     print(f"  * DeepSeek DSH: {dsh['total_tokens']:>14,} tokens ({dsh['total_tokens']/max(1,comb['total_tokens'])*100:>5.1f}%) | 费用: ${dsh.get('cost_usd', 0.0):>7.2f} (¥{dsh.get('cost_cny', 0.0):>7.2f}) | 缓存率: {dsh['cache_ratio']:>5.1f}% | 调用: {dsh['total_calls']:>5} 次")
-    print("-" * 86)
+    print(f"  * OpenCode AI : {opencode['total_tokens']:>14,} tokens ({opencode['total_tokens']/max(1,comb['total_tokens'])*100:>5.1f}%) | 费用: ${opencode.get('cost_usd', 0.0):>7.2f} (¥{opencode.get('cost_cny', 0.0):>7.2f}) | 缓存率: {opencode['cache_ratio']:>5.1f}% | 调用: {opencode['total_calls']:>5} 次")
+    print("-" * 106)
 
     if data["granularity"] == "hourly":
         print("[逐小时消耗明细 (仅展示有活跃调用的时段)]")
-        print(f"  {'时间段':<18} | {'全机总 Token':>14} | {'Antigravity':>12} | {'Codex':>12} | {'DeepSeek':>12} | {'总调用数':>8}")
-        print("  " + "-" * 88)
-        active_hours = [h for h in data["hourly_timeline"] if (h.get("agy_calls", 0) + h.get("codex_calls", 0) + h.get("dsh_calls", 0)) > 0]
+        print(f"  {'时间段':<18} | {'全机总 Token':>14} | {'Antigravity':>12} | {'Codex':>12} | {'DeepSeek':>10} | {'OpenCode':>10} | {'总调用数':>8}")
+        print("  " + "-" * 102)
+        active_hours = [h for h in data["hourly_timeline"] if (h.get("agy_calls", 0) + h.get("codex_calls", 0) + h.get("dsh_calls", 0) + h.get("opencode_calls", 0)) > 0]
         if not active_hours:
             print("  (所选时间范围内暂无活跃 Token 消耗)")
         else:
             for h in active_hours:
-                calls = h.get("agy_calls", 0) + h.get("codex_calls", 0) + h.get("dsh_calls", 0)
-                print(f"  {h['timestamp']:<18} | {h['total']:>14,} | {h.get('agy_total', 0):>12,} | {h.get('codex_total', 0):>12,} | {h.get('dsh_total', 0):>12,} | {calls:>8}")
-        print("-" * 86)
+                calls = h.get("agy_calls", 0) + h.get("codex_calls", 0) + h.get("dsh_calls", 0) + h.get("opencode_calls", 0)
+                print(f"  {h['timestamp']:<18} | {h['total']:>14,} | {h.get('agy_total', 0):>12,} | {h.get('codex_total', 0):>12,} | {h.get('dsh_total', 0):>10,} | {h.get('opencode_total', 0):>10,} | {calls:>8}")
+        print("-" * 106)
 
     print("[每日消耗趋势]")
-    print(f"  {'日期':<12} | {'全机总 Token':>14} | {'Antigravity':>12} | {'Codex':>12} | {'DeepSeek':>12} | {'总调用数':>8}")
-    print("  " + "-" * 82)
+    print(f"  {'日期':<12} | {'全机总 Token':>14} | {'Antigravity':>12} | {'Codex':>12} | {'DeepSeek':>10} | {'OpenCode':>10} | {'总调用数':>8}")
+    print("  " + "-" * 98)
     for d in data["daily_timeline"]:
-        calls = d.get("agy_calls", 0) + d.get("codex_calls", 0) + d.get("dsh_calls", 0)
-        print(f"  {d['date']:<12} | {d['total']:>14,} | {d.get('agy_total', 0):>12,} | {d.get('codex_total', 0):>12,} | {d.get('dsh_total', 0):>12,} | {calls:>8}")
-    print("=" * 86)
+        calls = d.get("agy_calls", 0) + d.get("codex_calls", 0) + d.get("dsh_calls", 0) + d.get("opencode_calls", 0)
+        print(f"  {d['date']:<12} | {d['total']:>14,} | {d.get('agy_total', 0):>12,} | {d.get('codex_total', 0):>12,} | {d.get('dsh_total', 0):>10,} | {d.get('opencode_total', 0):>10,} | {calls:>8}")
+    print("=" * 106)
 
 def main():
-    parser = argparse.ArgumentParser(description="本机 Antigravity, Codex 与 DeepSeek Harness Token 消耗统计小程序")
+    parser = argparse.ArgumentParser(description="本机 Antigravity, Codex, DeepSeek Harness 与 OpenCode Token 消耗统计小程序")
     parser.add_argument("--cli", action="store_true", help="仅在终端中输出统计表格，不启动 Web 界面")
     parser.add_argument("-d", "--days", type=float, default=7, help="查询过去 N 天内的消耗 (默认: 7)")
     parser.add_argument("--today", action="store_true", help="快捷参数：查询今天")
+    parser.add_argument("-f", "--force", "--force-rescan", dest="force", action="store_true", help="强制忽略历史缓存，全量重新扫描底层数据库")
     parser.add_argument("--hourly", action="store_true", help="强制逐小时粒度显示")
     parser.add_argument("--daily", action="store_true", help="强制按天粒度显示")
     parser.add_argument("--port", type=int, default=8765, help="Web 看板服务器端口 (默认: 8765)")
@@ -218,7 +224,7 @@ def main():
     end_dt = now
 
     if args.cli:
-        run_cli(start_dt, end_dt, granularity=granularity)
+        run_cli(start_dt, end_dt, granularity=granularity, force_full=args.force)
         return
 
     port = find_available_port(args.port)

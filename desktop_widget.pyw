@@ -25,15 +25,16 @@ import pystray
 from pystray import MenuItem as tray_item, Menu as tray_menu
 
 def create_tray_icon_image():
-    # 64x64 高清托盘图标 (圆形深色底座 + 三色能量数据柱)
+    # 64x64 高清托盘图标 (圆形深色底座 + 四色引擎能量数据柱)
     img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     # 外部圆环底座
     draw.ellipse([3, 3, 61, 61], fill=(13, 17, 23, 255), outline=(56, 189, 248, 255), width=3)
-    # 三根对应三引擎的明亮数据柱：青蓝 (AGY)、翠绿 (Codex)、亮蓝 (DeepSeek)
-    draw.rounded_rectangle([14, 30, 24, 48], radius=2, fill=(56, 189, 248, 255))
-    draw.rounded_rectangle([27, 20, 37, 48], radius=2, fill=(16, 185, 129, 255))
-    draw.rounded_rectangle([40, 12, 50, 48], radius=2, fill=(77, 107, 254, 255))
+    # 四根对应四引擎的明亮数据柱：青蓝 (AGY)、翠绿 (Codex)、亮蓝 (DeepSeek)、亮橙 (OpenCode)
+    draw.rounded_rectangle([11, 32, 18, 48], radius=2, fill=(56, 189, 248, 255))
+    draw.rounded_rectangle([22, 24, 29, 48], radius=2, fill=(16, 185, 129, 255))
+    draw.rounded_rectangle([33, 16, 40, 48], radius=2, fill=(77, 107, 254, 255))
+    draw.rounded_rectangle([44, 20, 51, 48], radius=2, fill=(249, 115, 22, 255))
     return img
 
 # 1. 启用 Windows 原生高 DPI 缩放（解决字体模糊发虚）
@@ -384,6 +385,9 @@ class DesktopTokenWidget:
         def on_refresh(icon, item):
             self.trigger_refresh()
 
+        def on_force_refresh(icon, item):
+            self.force_full_refresh()
+
         def on_toggle_topmost(icon, item):
             self.root.after(0, self._toggle_topmost)
 
@@ -417,7 +421,8 @@ class DesktopTokenWidget:
         tray_menu_obj = tray_menu(
             tray_item("👁️ 显示 / 隐藏悬浮窗", on_toggle, default=True),
             tray_item("🌐 打开 Web 监控看板", on_open_web),
-            tray_item("🔄 立即刷新数据", on_refresh),
+            tray_item("🔄 立即刷新增量", on_refresh),
+            tray_item("⚡ 全量重建历史缓存", on_force_refresh),
             tray_menu.SEPARATOR,
             tray_item("📌 保持窗口置顶", on_toggle_topmost, checked=is_topmost_checked),
             tray_item("🗂️ 在任务栏显示图标", on_toggle_taskbar, checked=is_taskbar_checked),
@@ -456,7 +461,8 @@ class DesktopTokenWidget:
     def _show_context_menu(self, event):
         menu = tk.Menu(self.root, tearoff=0, bg="#161b22", fg="#f0f6fc", activebackground="#38bdf8", activeforeground="#000", font=self.font_sub)
         menu.add_command(label="📥 最小化到系统托盘", command=self.hide_to_tray)
-        menu.add_command(label="🔄 立即刷新数据", command=self.trigger_refresh)
+        menu.add_command(label="🔄 立即刷新增量", command=self.trigger_refresh)
+        menu.add_command(label="⚡ 全量重建历史缓存", command=self.force_full_refresh)
         menu.add_command(label="📊 打开网页完整大屏", command=self._open_web_dashboard)
         menu.add_separator()
 
@@ -564,6 +570,9 @@ class DesktopTokenWidget:
     def trigger_refresh(self):
         threading.Thread(target=self._update_data_worker, daemon=True).start()
 
+    def force_full_refresh(self):
+        threading.Thread(target=lambda: self._update_data_worker(force_full=True), daemon=True).start()
+
     def _auto_refresh_worker(self):
         while self.is_running:
             self._update_data_worker()
@@ -572,26 +581,28 @@ class DesktopTokenWidget:
                 if not self.is_running: break
                 time.sleep(1)
 
-    def _update_data_worker(self):
+    def _update_data_worker(self, force_full=False):
         now = datetime.datetime.now()
         start_7d = now - datetime.timedelta(days=7)
         try:
-            data = token_core.get_combined_stats(start_dt=start_7d, end_dt=now)
+            data = token_core.get_combined_stats(start_dt=start_7d, end_dt=now, force_full=force_full)
 
             today_str = now.strftime("%Y-%m-%d")
             agy_today = data["antigravity"]["by_day"].get(today_str, {"total": 0, "calls": 0, "cached": 0, "in": 0, "out": 0, "thinking": 0})
             codex_today = data["codex"]["by_day"].get(today_str, {"total": 0, "calls": 0, "cached": 0, "in": 0, "out": 0, "thinking": 0})
             dsh_today = data.get("deepseek", {}).get("by_day", {}).get(today_str, {"total": 0, "calls": 0, "cached": 0, "in": 0, "out": 0, "thinking": 0, "cost_usd": 0.0})
+            opencode_today = data.get("opencode", {}).get("by_day", {}).get(today_str, {"total": 0, "calls": 0, "cached": 0, "in": 0, "out": 0, "thinking": 0, "cost_usd": 0.0})
 
-            today_tot = agy_today["total"] + codex_today["total"] + dsh_today["total"]
-            today_cached = agy_today["cached"] + codex_today["cached"] + dsh_today["cached"]
-            today_in = agy_today["in"] + codex_today["in"] + dsh_today["in"]
-            today_out = agy_today["out"] + codex_today["out"] + dsh_today["out"]
-            today_thinking = agy_today["thinking"] + codex_today["thinking"] + dsh_today["thinking"]
-            today_calls = agy_today["calls"] + codex_today["calls"] + dsh_today["calls"]
-            today_cost = agy_today.get("cost_usd", 0.0) + codex_today.get("cost_usd", 0.0) + dsh_today.get("cost_usd", 0.0)
+            today_tot = agy_today["total"] + codex_today["total"] + dsh_today["total"] + opencode_today["total"]
+            today_cached = agy_today["cached"] + codex_today["cached"] + dsh_today["cached"] + opencode_today["cached"]
+            today_in = agy_today["in"] + codex_today["in"] + dsh_today["in"] + opencode_today["in"]
+            today_out = agy_today["out"] + codex_today["out"] + dsh_today["out"] + opencode_today["out"]
+            today_thinking = agy_today["thinking"] + codex_today["thinking"] + dsh_today["thinking"] + opencode_today["thinking"]
+            today_calls = agy_today["calls"] + codex_today["calls"] + dsh_today["calls"] + opencode_today["calls"]
+            today_cost = agy_today.get("cost_usd", 0.0) + codex_today.get("cost_usd", 0.0) + dsh_today.get("cost_usd", 0.0) + opencode_today.get("cost_usd", 0.0)
 
             today_ratio = round(today_cached / today_in * 100, 1) if today_in > 0 else 0.0
+            rate = data.get("combined_summary", {}).get("exchange_rate", 7.25)
 
             time_str = now.strftime("%H:%M:%S")
 
@@ -602,15 +613,15 @@ class DesktopTokenWidget:
             self.timeline_data = timeline
 
             self.root.after(0, lambda: self._apply_ui_update(
-                today_tot, today_ratio, today_calls, today_in, today_out, today_thinking, today_cost, time_str, timeline
+                today_tot, today_ratio, today_calls, today_in, today_out, today_thinking, today_cost, time_str, timeline, rate
             ))
         except Exception:
             pass
 
-    def _apply_ui_update(self, tot, ratio, calls, in_tok, out_tok, thinking_tok, cost_usd, time_str, timeline):
+    def _apply_ui_update(self, tot, ratio, calls, in_tok, out_tok, thinking_tok, cost_usd, time_str, timeline, rate=7.25):
         self.val_today_total.configure(text=f"{fmt_short(tot)}")
         self.val_today_badge.configure(text=f"缓存 {ratio}%")
-        cost_str = f"${cost_usd:.2f} (￥{cost_usd*7.2:.1f})"
+        cost_str = f"${cost_usd:.2f} (￥{cost_usd*rate:.1f})"
         self.val_today_sub.configure(text=f"全机实时 · 预估费用: {cost_str}")
         self.lbl_today_calls.configure(text=f"{calls:,} 次调用")
         self.lbl_detail_in.configure(text=f"输入: {fmt_short(in_tok)}")
