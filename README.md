@@ -11,6 +11,8 @@
 [![Python](https://img.shields.io/badge/python-3.9+-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20(便携独立版)-0078D6.svg?style=flat-square&logo=windows&logoColor=white)](https://github.com/Doraawa/OmniToken/releases)
 
+**[简体中文](README.md)** • **[English](README_EN.md)**
+
 [✨ 核心功能](#-核心功能) • [🚀 快速开始](#-快速开始) • [⚡ 性能与历史缓存架构](#-性能与历史缓存架构) • [💰 定价模型与汇率](#-支持模型与计费规则) • [🖥️ 界面与交互](#️-界面与交互) • [⚙️ 高级配置与打包](#️-高级配置与打包)
 
 </div>
@@ -77,7 +79,7 @@ flowchart TD
     J --> K[返回最新全局统计]
 ```
 
-- **缓存文件路径**：`~/.gemini/antigravity/token_history_cache.json`
+- **缓存文件路径**：`~/.omnitoken/token_history_cache.json`（原生独立目录，且兼容自动迁移旧版缓存）
 - **今日极速增量**：利用系统文件修改时间戳（mtime）智能跳过历史旧文件，无需打开无关数据库，内存开销极低。
 - **强制全量重建**：在更换数据库、删除历史会话或手动校验账目时，只需点击网页端「⚡ 全量重扫缓存」或使用 `python main.py --cli --force` 即可刷新缓存。
 
@@ -93,6 +95,7 @@ flowchart TD
 *资费单位：美元 / 每 1,000,000 (1M) Tokens；按阶梯分别计算未缓存输入、缓存读取与生成输出。*
 
 | 客户端平台 | 模型名称 | 未缓存输入 (Input) | 缓存命中 (Cache Read) | 补全输出 (Output/Think) | 定价特性与说明 |
+| :--- | :--- | :---: | :---: | :---: | :--- |
 | **Google Antigravity** | `Gemini 3.8 Flash` | \$0.10 | \$0.025 | \$0.40 | 次世代高速大吞吐模型 (全强度合并) |
 | | `Gemini 3.7 Flash` | \$0.10 | \$0.025 | \$0.40 | 3.7 混合推理极速版 (全强度合并) |
 | | `Gemini 2.0 Flash` | \$0.10 | \$0.025 | \$0.40 | 2.0 旗舰级速度与多模态 |

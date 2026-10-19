@@ -10,6 +10,7 @@ import os
 import re
 import glob
 import json
+import shutil
 import sqlite3
 import datetime
 from collections import defaultdict
@@ -921,10 +922,31 @@ def aggregate_data(records, convo_stats, default_client=""):
     }
 
 def get_cache_file():
-    base_dir = os.path.expanduser(os.path.join("~", ".gemini", "antigravity"))
-    if not os.path.isdir(base_dir):
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(base_dir, "token_history_cache.json")
+    """
+    获取全局缓存文件路径。
+    优先使用标准的独立软件主目录 ~/.omnitoken/，并自动兼容迁移历史旧路径 (~/.gemini/antigravity)。
+    """
+    omni_dir = os.path.expanduser(os.path.join("~", ".omnitoken"))
+    omni_cache = os.path.join(omni_dir, "token_history_cache.json")
+    if os.path.isfile(omni_cache):
+        return omni_cache
+
+    # 兼容检查旧路径 (~/.gemini/antigravity/token_history_cache.json)
+    legacy_cache = os.path.expanduser(os.path.join("~", ".gemini", "antigravity", "token_history_cache.json"))
+    if os.path.isfile(legacy_cache):
+        try:
+            os.makedirs(omni_dir, exist_ok=True)
+            shutil.copy2(legacy_cache, omni_cache)
+            return omni_cache
+        except Exception:
+            return legacy_cache
+
+    # 默认创建独立目录 ~/.omnitoken
+    try:
+        os.makedirs(omni_dir, exist_ok=True)
+        return omni_cache
+    except Exception:
+        return os.path.join(os.path.expanduser("~"), "token_history_cache.json")
 
 def load_history_cache(yesterday_str: str):
     cache_path = get_cache_file()
