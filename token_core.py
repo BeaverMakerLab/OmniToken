@@ -26,28 +26,42 @@ AGY_MODEL_MAP = {
     1026: "Gemini 1.5 Flash",
     1036: "Gemini 2.0 Flash",
     1050: "Gemini 2.0 Pro",
-    1298: "Gemini 3.7 Flash (High)",
-    1299: "Gemini 3.7 Flash (Low)",
+    1298: "Gemini 3.7 Flash",
+    1299: "Gemini 3.7 Flash",
     1300: "Gemini 3.7 Pro",
-    1318: "Gemini 3.8 Flash (High)",
-    1319: "Gemini 3.8 Flash (Low)",
+    1318: "Gemini 3.8 Flash",
+    1319: "Gemini 3.8 Flash",
 }
 
 USD_TO_CNY = 7.25
+
+def normalize_model_name(name: str) -> str:
+    """归一化模型名称，剔除 (High)/(Low) 思考强度后缀并规范化命名"""
+    if not name:
+        return ""
+    s = str(name).strip()
+    if s in ("Gemini 3.8 Flash (High)", "Gemini 3.8 Flash (Low)"):
+        return "Gemini 3.8 Flash"
+    if s in ("Gemini 3.7 Flash (High)", "Gemini 3.7 Flash (Low)"):
+        return "Gemini 3.7 Flash"
+    return s
 
 # 官方公开标准 API 单价 (单位: 美元 / 每 1,000,000 Tokens)
 # uncached: 未缓存输入单价, cached: 缓存命中输入单价, output: 输出单价 (含思考Token)
 MODEL_PRICING = {
     # --- Google Gemini 系列 (Antigravity) ---
-    "Gemini 3.8 Flash (High)": {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
-    "Gemini 3.8 Flash (Low)":  {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
-    "Gemini 3.7 Flash (High)": {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
-    "Gemini 3.7 Flash (Low)":  {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
+    "Gemini 3.8 Flash":        {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
+    "Gemini 3.7 Flash":        {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
     "Gemini 2.0 Flash":        {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
     "Gemini 1.5 Flash":        {"uncached": 0.075, "cached": 0.01875, "output": 0.30, "currency": "USD"},
     "Gemini 3.7 Pro":          {"uncached": 1.25, "cached": 0.3125, "output": 5.00, "currency": "USD"},
     "Gemini 2.0 Pro":          {"uncached": 1.25, "cached": 0.3125, "output": 5.00, "currency": "USD"},
     "Gemini 1.5 Pro":          {"uncached": 1.25, "cached": 0.3125, "output": 5.00, "currency": "USD"},
+    # 兼容历史缓存数据的旧键
+    "Gemini 3.8 Flash (High)": {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
+    "Gemini 3.8 Flash (Low)":  {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
+    "Gemini 3.7 Flash (High)": {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
+    "Gemini 3.7 Flash (Low)":  {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
 
     # --- OpenAI Codex 系列 ---
     "gpt-6-astra":   {"uncached": 5.00, "cached": 2.50, "output": 20.00, "currency": "USD"},
@@ -82,6 +96,7 @@ MODEL_PRICING = {
 def get_pricing_for_model(model_name: str) -> dict:
     if not model_name:
         return {"uncached": 1.00, "cached": 0.25, "output": 4.00, "currency": "USD"}
+    model_name = normalize_model_name(model_name)
     if model_name in MODEL_PRICING:
         return MODEL_PRICING[model_name]
     
@@ -828,7 +843,8 @@ def aggregate_data(records, convo_stats, default_client=""):
         "cost_usd": 0.0, "cost_cny": 0.0, "pricing": {}
     })
     for r in records:
-        m = r["model"]
+        m = normalize_model_name(r["model"])
+        r["model"] = m
         c_usd = r.get("cost_usd", 0.0)
         c_cny = c_usd * USD_TO_CNY
         by_model[m]["calls"] += 1
@@ -873,7 +889,7 @@ def aggregate_data(records, convo_stats, default_client=""):
         item = {
             "id": cid,
             "title": s.get("title", cid),
-            "model": s.get("model", ""),
+            "model": normalize_model_name(s.get("model", "")),
             "app": s.get("app", ""),
             "client": client,
             "calls": s["calls"],
@@ -918,6 +934,10 @@ def load_history_cache(yesterday_str: str):
         with open(cache_path, "r", encoding="utf-8") as f:
             data = json.load(f)
             if data.get("version") == 1 and data.get("last_cached_day", "") >= yesterday_str:
+                for r in data.get("agy_recs", []):
+                    r["model"] = normalize_model_name(r.get("model"))
+                for c in data.get("agy_convos", {}).values():
+                    c["model"] = normalize_model_name(c.get("model"))
                 return data
     except Exception:
         pass
@@ -955,7 +975,7 @@ def merge_convo_stats(hist_convos, today_convos):
         m["text_out"] += s.get("text_out", 0)
         m["cost_usd"] += s.get("cost_usd", 0.0)
         if s.get("title"): m["title"] = s["title"]
-        if s.get("model"): m["model"] = s["model"]
+        if s.get("model"): m["model"] = normalize_model_name(s["model"])
         if s.get("client"): m["client"] = s["client"]
         if s.get("app"): m["app"] = s["app"]
 
@@ -970,7 +990,7 @@ def merge_convo_stats(hist_convos, today_convos):
         m["text_out"] += s.get("text_out", 0)
         m["cost_usd"] += s.get("cost_usd", 0.0)
         if s.get("title"): m["title"] = s["title"]
-        if s.get("model"): m["model"] = s["model"]
+        if s.get("model"): m["model"] = normalize_model_name(s["model"])
         if s.get("client"): m["client"] = s["client"]
         if s.get("app"): m["app"] = s["app"]
     return merged
@@ -1177,56 +1197,64 @@ def get_combined_stats(gemini_dir=None, codex_dir=None, dsh_dir=None, opencode_d
         "cost_usd": 0.0, "cost_cny": 0.0, "pricing": {}, "clients": set()
     })
     for m, v in agy_stats["by_model"].items():
-        all_models[m]["calls"] += v["calls"]
-        all_models[m]["total"] += v["total"]
-        all_models[m]["in"] += v["in"]
-        all_models[m]["cached"] += v["cached"]
-        all_models[m]["uncached"] += v.get("uncached", 0)
-        all_models[m]["out"] += v["out"]
-        all_models[m]["thinking"] += v["thinking"]
-        all_models[m]["cost_usd"] += v.get("cost_usd", 0.0)
-        all_models[m]["cost_cny"] += v.get("cost_cny", 0.0)
-        all_models[m]["pricing"] = v.get("pricing", {})
-        all_models[m]["clients"].add("Antigravity")
+        nm = normalize_model_name(m)
+        all_models[nm]["calls"] += v["calls"]
+        all_models[nm]["total"] += v["total"]
+        all_models[nm]["in"] += v["in"]
+        all_models[nm]["cached"] += v["cached"]
+        all_models[nm]["uncached"] += v.get("uncached", 0)
+        all_models[nm]["out"] += v["out"]
+        all_models[nm]["thinking"] += v["thinking"]
+        all_models[nm]["cost_usd"] += v.get("cost_usd", 0.0)
+        all_models[nm]["cost_cny"] += v.get("cost_cny", 0.0)
+        if not all_models[nm]["pricing"]:
+            all_models[nm]["pricing"] = v.get("pricing", {}) or get_pricing_for_model(nm)
+        all_models[nm]["clients"].add("Antigravity")
 
     for m, v in codex_stats["by_model"].items():
-        all_models[m]["calls"] += v["calls"]
-        all_models[m]["total"] += v["total"]
-        all_models[m]["in"] += v["in"]
-        all_models[m]["cached"] += v["cached"]
-        all_models[m]["uncached"] += v.get("uncached", 0)
-        all_models[m]["out"] += v["out"]
-        all_models[m]["thinking"] += v["thinking"]
-        all_models[m]["cost_usd"] += v.get("cost_usd", 0.0)
-        all_models[m]["cost_cny"] += v.get("cost_cny", 0.0)
-        all_models[m]["pricing"] = v.get("pricing", {})
-        all_models[m]["clients"].add("Codex")
+        nm = normalize_model_name(m)
+        all_models[nm]["calls"] += v["calls"]
+        all_models[nm]["total"] += v["total"]
+        all_models[nm]["in"] += v["in"]
+        all_models[nm]["cached"] += v["cached"]
+        all_models[nm]["uncached"] += v.get("uncached", 0)
+        all_models[nm]["out"] += v["out"]
+        all_models[nm]["thinking"] += v["thinking"]
+        all_models[nm]["cost_usd"] += v.get("cost_usd", 0.0)
+        all_models[nm]["cost_cny"] += v.get("cost_cny", 0.0)
+        if not all_models[nm]["pricing"]:
+            all_models[nm]["pricing"] = v.get("pricing", {}) or get_pricing_for_model(nm)
+        all_models[nm]["clients"].add("Codex")
 
     for m, v in dsh_stats["by_model"].items():
-        all_models[m]["calls"] += v["calls"]
-        all_models[m]["total"] += v["total"]
-        all_models[m]["in"] += v["in"]
-        all_models[m]["cached"] += v["cached"]
-        all_models[m]["uncached"] += v.get("uncached", 0)
-        all_models[m]["out"] += v["out"]
-        all_models[m]["thinking"] += v["thinking"]
-        all_models[m]["cost_usd"] += v.get("cost_usd", 0.0)
-        all_models[m]["cost_cny"] += v.get("cost_cny", 0.0)
-        all_models[m]["pricing"] = v.get("pricing", {})
-        all_models[m]["clients"].add("DeepSeek")
+        nm = normalize_model_name(m)
+        all_models[nm]["calls"] += v["calls"]
+        all_models[nm]["total"] += v["total"]
+        all_models[nm]["in"] += v["in"]
+        all_models[nm]["cached"] += v["cached"]
+        all_models[nm]["uncached"] += v.get("uncached", 0)
+        all_models[nm]["out"] += v["out"]
+        all_models[nm]["thinking"] += v["thinking"]
+        all_models[nm]["cost_usd"] += v.get("cost_usd", 0.0)
+        all_models[nm]["cost_cny"] += v.get("cost_cny", 0.0)
+        if not all_models[nm]["pricing"]:
+            all_models[nm]["pricing"] = v.get("pricing", {}) or get_pricing_for_model(nm)
+        all_models[nm]["clients"].add("DeepSeek")
 
     for m, v in opencode_stats["by_model"].items():
-        all_models[m]["calls"] += v["calls"]
-        all_models[m]["total"] += v["total"]
-        all_models[m]["in"] += v["in"]
-        all_models[m]["cached"] += v["cached"]
-        all_models[m]["uncached"] += v.get("uncached", 0)
-        all_models[m]["out"] += v["out"]
-        all_models[m]["thinking"] += v["thinking"]
-        all_models[m]["cost_usd"] += v.get("cost_usd", 0.0)
-        all_models[m]["cost_cny"] += v.get("cost_cny", 0.0)
-        all_models[m]["pricing"] = v.get("pricing", {})
-        all_models[m]["clients"].add("OpenCode")
+        nm = normalize_model_name(m)
+        all_models[nm]["calls"] += v["calls"]
+        all_models[nm]["total"] += v["total"]
+        all_models[nm]["in"] += v["in"]
+        all_models[nm]["cached"] += v["cached"]
+        all_models[nm]["uncached"] += v.get("uncached", 0)
+        all_models[nm]["out"] += v["out"]
+        all_models[nm]["thinking"] += v["thinking"]
+        all_models[nm]["cost_usd"] += v.get("cost_usd", 0.0)
+        all_models[nm]["cost_cny"] += v.get("cost_cny", 0.0)
+        if not all_models[nm]["pricing"]:
+            all_models[nm]["pricing"] = v.get("pricing", {}) or get_pricing_for_model(nm)
+        all_models[nm]["clients"].add("OpenCode")
 
     all_models_dict = {}
     for m, d in sorted(all_models.items(), key=lambda x: x[1]["cost_usd"], reverse=True):
