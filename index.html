@@ -575,10 +575,11 @@
 
       for (const c of topList.slice(0, 15)) {
         const tr = document.createElement('tr');
-        let clientBadge = `<span style="font-weight: 600;">${c.client || c.app || '未知'}</span>`;
+        let clientBadge = `<span style="font-weight: 600;">${c.client || '未知'}</span>`;
         const cName = c.client || c.app || '';
-        if (cName.includes('Antigravity') || cName === 'AGY' || cName === 'IDE' || cName === 'CLI') {
-          clientBadge = `<span style="color: var(--agy-color); font-weight: 600;">Antigravity</span>`;
+        if (cName.includes('Antigravity') || cName === 'AGY' || cName === 'IDE' || cName === 'CLI' || cName === 'Desktop') {
+          const subApp = (c.app && c.app !== 'Antigravity') ? ` <span style="font-size: 11px; opacity: 0.75; font-weight: normal;">(${c.app})</span>` : '';
+          clientBadge = `<span style="color: var(--agy-color); font-weight: 600;">Antigravity</span>${subApp}`;
         } else if (cName.includes('Codex')) {
           clientBadge = `<span style="color: var(--codex-color); font-weight: 600;">Codex</span>`;
         } else if (cName.includes('DeepSeek')) {

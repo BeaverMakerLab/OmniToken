@@ -1,6 +1,9 @@
 # OmniToken Python Dependencies
 # Most components use Python standard library (tkinter, sqlite3, http.server, etc.)
-# The desktop widget requires Pillow for image rendering and pystray for system tray support.
+# Pillow: image rendering for desktop widget HUD
+# pystray: system tray icon & menu
+# zstandard: optional, for fast decompression of DeepSeek Harness .zstd session logs
 
 Pillow>=9.0.0
 pystray>=0.19.4
+zstandard>=0.22.0

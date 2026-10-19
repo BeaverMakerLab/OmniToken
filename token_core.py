@@ -143,7 +143,7 @@ def scan_antigravity(gemini_dir: str, start_ts: float, end_ts: float):
     records = []
     convo_stats = defaultdict(lambda: {
         "calls": 0, "uncached_in": 0, "cached_in": 0, "total_in": 0,
-        "cand_out": 0, "thinking": 0, "text_out": 0, "app": "", "title": "", "model": "", "cost_usd": 0.0
+        "cand_out": 0, "thinking": 0, "text_out": 0, "app": "", "client": "Antigravity", "title": "", "model": "", "cost_usd": 0.0
     })
     seen_step_signatures = set()
 
@@ -229,6 +229,7 @@ def scan_antigravity(gemini_dir: str, start_ts: float, end_ts: float):
                         "dt_str": dt_obj.strftime("%Y-%m-%d %H:%M:%S"),
                         "day": dt_obj.strftime("%Y-%m-%d"),
                         "hour": dt_obj.strftime("%Y-%m-%d %H:00"),
+                        "client": "Antigravity",
                         "app": app,
                         "convo_id": convo_id,
                         "title": title,
@@ -252,6 +253,7 @@ def scan_antigravity(gemini_dir: str, start_ts: float, end_ts: float):
                     cs["cand_out"] += cand_out
                     cs["thinking"] += thinking
                     cs["text_out"] += text_out
+                    cs["client"] = "Antigravity"
                     cs["app"] = app
                     cs["title"] = title
                     cs["model"] = model_name
@@ -287,7 +289,7 @@ def scan_codex(codex_dir: str, start_ts: float, end_ts: float):
     records = []
     convo_stats = defaultdict(lambda: {
         "calls": 0, "uncached_in": 0, "cached_in": 0, "total_in": 0,
-        "cand_out": 0, "thinking": 0, "text_out": 0, "model": "", "title": "", "app": "Codex", "cost_usd": 0.0
+        "cand_out": 0, "thinking": 0, "text_out": 0, "model": "", "title": "", "client": "Codex", "app": "CLI", "cost_usd": 0.0
     })
     rate_limits = None
 
@@ -395,7 +397,8 @@ def scan_codex(codex_dir: str, start_ts: float, end_ts: float):
                             "dt_str": dt.strftime("%Y-%m-%d %H:%M:%S"),
                             "day": dt.strftime("%Y-%m-%d"),
                             "hour": dt.strftime("%Y-%m-%d %H:00"),
-                            "app": "Codex",
+                            "client": "Codex",
+                            "app": "CLI",
                             "convo_id": thread_id,
                             "title": current_title,
                             "model": current_model,
@@ -418,7 +421,8 @@ def scan_codex(codex_dir: str, start_ts: float, end_ts: float):
                         cs["cand_out"] += output_tokens
                         cs["thinking"] += thinking
                         cs["text_out"] += text_out
-                        cs["app"] = "Codex"
+                        cs["client"] = "Codex"
+                        cs["app"] = "CLI"
                         cs["model"] = current_model
                         cs["title"] = current_title
                         cs["cost_usd"] += cost_usd
@@ -431,7 +435,7 @@ def scan_deepseek(dsh_dir: str, start_ts: float, end_ts: float):
     if not os.path.isdir(dsh_dir):
         return [], defaultdict(lambda: {
             "calls": 0, "uncached_in": 0, "cached_in": 0, "total_in": 0,
-            "cand_out": 0, "thinking": 0, "text_out": 0, "app": "DeepSeek Harness", "model": "", "title": "",
+            "cand_out": 0, "thinking": 0, "text_out": 0, "client": "DeepSeek", "app": "Harness", "model": "", "title": "",
             "cost_usd": 0.0
         })
 
@@ -467,7 +471,7 @@ def scan_deepseek(dsh_dir: str, start_ts: float, end_ts: float):
     records = []
     convo_stats = defaultdict(lambda: {
         "calls": 0, "uncached_in": 0, "cached_in": 0, "total_in": 0,
-        "cand_out": 0, "thinking": 0, "text_out": 0, "app": "DeepSeek Harness", "model": "", "title": "",
+        "cand_out": 0, "thinking": 0, "text_out": 0, "client": "DeepSeek", "app": "Harness", "model": "", "title": "",
         "cost_usd": 0.0
     })
 
@@ -581,7 +585,8 @@ def scan_deepseek(dsh_dir: str, start_ts: float, end_ts: float):
                     "dt_str": dt_obj.strftime("%Y-%m-%d %H:%M:%S"),
                     "day": dt_obj.strftime("%Y-%m-%d"),
                     "hour": dt_obj.strftime("%Y-%m-%d %H:00"),
-                    "app": "DeepSeek Harness",
+                    "client": "DeepSeek",
+                    "app": "Harness",
                     "convo_id": session_id,
                     "title": current_title,
                     "model": model_name,
@@ -606,7 +611,8 @@ def scan_deepseek(dsh_dir: str, start_ts: float, end_ts: float):
                 cs["text_out"] += text_out
                 cs["model"] = model_name
                 cs["title"] = current_title
-                cs["app"] = "DeepSeek Harness"
+                cs["client"] = "DeepSeek"
+                cs["app"] = "Harness"
                 cs["cost_usd"] += cost_usd
 
         except Exception:
@@ -639,7 +645,8 @@ def scan_deepseek(dsh_dir: str, start_ts: float, end_ts: float):
                 "dt_str": dt_obj.strftime("%Y-%m-%d %H:%M:%S"),
                 "day": dt_obj.strftime("%Y-%m-%d"),
                 "hour": dt_obj.strftime("%Y-%m-%d %H:00"),
-                "app": "DeepSeek Harness",
+                "client": "DeepSeek",
+                "app": "Harness",
                 "convo_id": sid,
                 "title": pmeta.get("title", sid),
                 "model": pmeta.get("model", "deepseek-chat"),
@@ -663,12 +670,13 @@ def scan_deepseek(dsh_dir: str, start_ts: float, end_ts: float):
             cs["text_out"] += output_tokens
             cs["model"] = pmeta.get("model", "deepseek-chat")
             cs["title"] = pmeta.get("title", sid)
-            cs["app"] = "DeepSeek Harness"
+            cs["client"] = "DeepSeek"
+            cs["app"] = "Harness"
             cs["cost_usd"] += cost_usd
 
     return records, convo_stats
 
-def aggregate_data(records, convo_stats):
+def aggregate_data(records, convo_stats, default_client=""):
     tot_calls = len(records)
     tot_uncached_in = sum(r["uncached_in"] for r in records)
     tot_cached_in = sum(r["cached_in"] for r in records)
@@ -751,12 +759,24 @@ def aggregate_data(records, convo_stats):
     top_convos = []
     for cid, s in sorted(convo_stats.items(), key=lambda x: x[1]["total_in"] + x[1]["cand_out"], reverse=True)[:10]:
         c_usd = s.get("cost_usd", 0.0)
+        client = s.get("client") or default_client
+        if not client:
+            app_val = s.get("app", "")
+            if app_val in ("Desktop", "CLI", "IDE") or "antigravity" in str(app_val).lower():
+                client = "Antigravity"
+            elif "codex" in str(app_val).lower():
+                client = "Codex"
+            elif "deepseek" in str(app_val).lower() or "dsh" in str(app_val).lower():
+                client = "DeepSeek"
+            else:
+                client = app_val or "未知"
+
         item = {
             "id": cid,
             "title": s.get("title", cid),
             "model": s.get("model", ""),
             "app": s.get("app", ""),
-            "client": s.get("app", ""),
+            "client": client,
             "calls": s["calls"],
             "total_tokens": s["total_in"] + s["cand_out"],
             "cached_tokens": s["cached_in"],
@@ -804,9 +824,9 @@ def get_combined_stats(gemini_dir=None, codex_dir=None, dsh_dir=None, start_dt=N
     codex_recs, codex_convos, rate_limits = scan_codex(codex_dir, start_ts, end_ts)
     dsh_recs, dsh_convos = scan_deepseek(dsh_dir, start_ts, end_ts)
 
-    agy_stats = aggregate_data(agy_recs, agy_convos)
-    codex_stats = aggregate_data(codex_recs, codex_convos)
-    dsh_stats = aggregate_data(dsh_recs, dsh_convos)
+    agy_stats = aggregate_data(agy_recs, agy_convos, default_client="Antigravity")
+    codex_stats = aggregate_data(codex_recs, codex_convos, default_client="Codex")
+    dsh_stats = aggregate_data(dsh_recs, dsh_convos, default_client="DeepSeek")
 
     comb_tot = agy_stats["summary"]["total_tokens"] + codex_stats["summary"]["total_tokens"] + dsh_stats["summary"]["total_tokens"]
     comb_calls = agy_stats["summary"]["total_calls"] + codex_stats["summary"]["total_calls"] + dsh_stats["summary"]["total_calls"]
