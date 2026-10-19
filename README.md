@@ -6,10 +6,10 @@
 
 *跨端聚合 Google Antigravity、OpenAI Codex、DeepSeek Harness 与 OpenCode 消耗流水，内置全量模型官方阶梯计价，搭载毫秒级历史缓存引擎、微信式系统托盘悬浮窗与炫酷数据大屏*
 
-[![Release](https://img.shields.io/github/v/release/Doraawa/OmniToken?color=blue&style=flat-square)](https://github.com/Doraawa/OmniToken/releases)
+[![Release](https://img.shields.io/github/v/release/BeaverMakerLab/OmniToken?color=blue&style=flat-square)](https://github.com/BeaverMakerLab/OmniToken/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.9+-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-[![Platform](https://img.shields.io/badge/platform-Windows%20(便携独立版)-0078D6.svg?style=flat-square&logo=windows&logoColor=white)](https://github.com/Doraawa/OmniToken/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%20(便携独立版)-0078D6.svg?style=flat-square&logo=windows&logoColor=white)](https://github.com/BeaverMakerLab/OmniToken/releases)
 
 **[简体中文](README.md)** • **[English](README_EN.md)**
 
@@ -139,7 +139,7 @@ flowchart TD
 
 无需安装 Python 或任何依赖，解压即用：
 
-1. 前往 [GitHub Releases 发行页面](https://github.com/Doraawa/OmniToken/releases) 下载最新版本的 `TokenMonitor-v1.0-Windows.zip`。
+1. 前往 [GitHub Releases 发行页面](https://github.com/BeaverMakerLab/OmniToken/releases) 下载最新版本的 `TokenMonitor-v1.0-Windows.zip`。
 2. 解压到本地任意目录（例如 `D:\Tools\OmniToken`）。
 3. 双击运行 `TokenMonitor.exe`：
    - 桌面边缘自动常驻半透明 HUD 悬浮窗；
@@ -154,7 +154,7 @@ flowchart TD
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/Doraawa/OmniToken.git
+git clone https://github.com/BeaverMakerLab/OmniToken.git
 cd OmniToken
 
 # 2. 安装必要依赖 (仅两个极简纯图形库)

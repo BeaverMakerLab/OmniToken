@@ -6,10 +6,10 @@
 
 *Cross-platform aggregation for Google Antigravity, OpenAI Codex, DeepSeek Harness, and OpenCode AI. Built-in official tiered pricing, sub-millisecond historical caching, WeChat-style system tray HUD, and responsive interactive web dashboard.*
 
-[![Release](https://img.shields.io/github/v/release/Doraawa/OmniToken?color=blue&style=flat-square)](https://github.com/Doraawa/OmniToken/releases)
+[![Release](https://img.shields.io/github/v/release/BeaverMakerLab/OmniToken?color=blue&style=flat-square)](https://github.com/BeaverMakerLab/OmniToken/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.9+-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-[![Platform](https://img.shields.io/badge/platform-Windows%20(Portable%20Standalone)-0078D6.svg?style=flat-square&logo=windows&logoColor=white)](https://github.com/Doraawa/OmniToken/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%20(Portable%20Standalone)-0078D6.svg?style=flat-square&logo=windows&logoColor=white)](https://github.com/BeaverMakerLab/OmniToken/releases)
 
 **[English](README_EN.md)** • **[简体中文](README.md)**
 
@@ -146,7 +146,7 @@ When encountering unlisted or custom fine-tuned model identifiers, the system in
 
 No Python installation required. Unpack and run immediately:
 
-1. Download `TokenMonitor-v1.0-Windows.zip` from [GitHub Releases](https://github.com/Doraawa/OmniToken/releases).
+1. Download `TokenMonitor-v1.0-Windows.zip` from [GitHub Releases](https://github.com/BeaverMakerLab/OmniToken/releases).
 2. Extract to any local folder (e.g., `D:\Tools\OmniToken`).
 3. Double-click `TokenMonitor.exe`:
    - A translucent floating HUD appears at your desktop edge;
@@ -161,7 +161,7 @@ If you prefer running from source in a Python environment:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/Doraawa/OmniToken.git
+git clone https://github.com/BeaverMakerLab/OmniToken.git
 cd OmniToken
 
 # 2. Install minimal dependencies (pure GUI libraries only)
