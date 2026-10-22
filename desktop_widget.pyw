@@ -164,7 +164,7 @@ class DesktopTokenWidget:
         self._apply_taskbar_visibility()
 
         self.root.lift()
-        self.root.attributes("-topmost", True)
+        self._apply_topmost()
 
         self._drag_data = {"x": 0, "y": 0}
         self._resize_data = {"x": 0, "y": 0, "w": 0, "h": 0}
@@ -188,6 +188,9 @@ class DesktopTokenWidget:
         self.is_running = True
         self.refresh_thread = threading.Thread(target=self._auto_refresh_worker, daemon=True)
         self.refresh_thread.start()
+
+        # 启动置顶周期保活守护（解决长时间睡眠、锁屏唤醒、Win+D导致的Z序重置）
+        self._schedule_topmost_keepalive()
 
         # 确保后台嵌入式 Web 服务就绪（随时供双击呼出完整看板）
         try:
@@ -321,6 +324,7 @@ class DesktopTokenWidget:
         self.config["x"] = self.root.winfo_x()
         self.config["y"] = self.root.winfo_y()
         save_config(self.config)
+        self._apply_topmost()
 
     # --- 拖拽调整大小逻辑 ---
     def _on_resize_start(self, event):
@@ -341,6 +345,7 @@ class DesktopTokenWidget:
         self.config["width"] = self.root.winfo_width()
         self.config["height"] = self.root.winfo_height()
         save_config(self.config)
+        self._apply_topmost()
 
     def _on_double_click(self, event):
         self._open_web_dashboard()
@@ -368,10 +373,9 @@ class DesktopTokenWidget:
         self.root.overrideredirect(True)
         self._apply_taskbar_visibility()
         self.root.lift()
-        if self.config.get("topmost", True):
-            self.root.attributes("-topmost", True)
-        self.root.focus_force()
         self.is_window_visible = True
+        self._apply_topmost()
+        self.root.focus_force()
 
     def _init_system_tray(self):
         icon_img = create_tray_icon_image()
@@ -490,6 +494,8 @@ class DesktopTokenWidget:
         menu.add_command(label="❌ 彻底退出程序", command=self.quit_application)
 
         menu.tk_popup(event.x_root, event.y_root)
+        # 上下文菜单弹出并交互/关闭后，延迟 100ms 加固置顶，解决 tk_popup 导致的 Z 序丢失
+        self.root.after(100, self._apply_topmost)
 
     def _set_preset_size(self, w, h):
         self.root.geometry(f"{w}x{h}")
@@ -500,8 +506,53 @@ class DesktopTokenWidget:
     def _toggle_topmost(self):
         new_state = not self.config.get("topmost", True)
         self.config["topmost"] = new_state
-        self.root.attributes("-topmost", new_state)
+        self._apply_topmost()
         save_config(self.config)
+
+    def _apply_topmost(self):
+        """强制对操作系统声明 HWND_TOPMOST / HWND_NOTOPMOST，并深度加固 Win32 窗口 Z 序"""
+        is_top = self.config.get("topmost", True)
+        if not self.is_window_visible:
+            return
+
+        # 1. Tkinter 原生属性声明
+        try:
+            self.root.attributes("-topmost", is_top)
+        except Exception:
+            pass
+
+        # 2. Windows 平台底层 Win32 API 深度加固 (不抢焦点 SWP_NOACTIVATE，无感知保活)
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                self.root.update_idletasks()
+                hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id())
+                if not hwnd:
+                    hwnd = self.root.winfo_id()
+
+                HWND_TOPMOST = -1
+                HWND_NOTOPMOST = -2
+                target_hwnd = HWND_TOPMOST if is_top else HWND_NOTOPMOST
+
+                # SWP_NOSIZE (0x0001) | SWP_NOMOVE (0x0002) | SWP_NOACTIVATE (0x0010) | SWP_SHOWWINDOW (0x0040)
+                SWP_FLAGS = 0x0001 | 0x0002 | 0x0010 | 0x0040
+                ctypes.windll.user32.SetWindowPos(
+                    hwnd,
+                    target_hwnd,
+                    0, 0, 0, 0,
+                    SWP_FLAGS
+                )
+            except Exception:
+                pass
+
+    def _schedule_topmost_keepalive(self):
+        """周期性置顶保活心跳（每 2 秒检测加固一次，彻底解决长时间休眠、锁屏唤醒、Win+D导致的Z序重置）"""
+        if not self.is_running:
+            return
+        if self.is_window_visible and self.config.get("topmost", True):
+            self._apply_topmost()
+        # 持续调度下一次保活心跳
+        self.root.after(2000, self._schedule_topmost_keepalive)
 
     def _apply_taskbar_visibility(self):
         if sys.platform == "win32":
@@ -520,6 +571,7 @@ class DesktopTokenWidget:
                 else:
                     style = (style & ~WS_EX_APPWINDOW) | WS_EX_TOOLWINDOW
                 ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
+                self._apply_topmost()
             except Exception:
                 pass
 
