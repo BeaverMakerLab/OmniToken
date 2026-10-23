@@ -106,6 +106,11 @@ def fmt_short(n):
 class DesktopTokenWidget:
     def __init__(self):
         self.config = load_config()
+        self.is_window_visible = True
+        self.is_running = True
+        self._hide_notified = False
+        self.tray_icon = None
+
         self.root = tk.Tk()
         self.root.title("Token Monitor Widget")
 
@@ -178,14 +183,10 @@ class DesktopTokenWidget:
         self._build_ui()
         self._bind_events()
 
-        # 状态标志与系统托盘初始化 (类似微信常驻右下角)
-        self.is_window_visible = True
-        self._hide_notified = False
-        self.tray_icon = None
+        # 系统托盘初始化 (类似微信常驻右下角)
         self._init_system_tray()
 
         # 启动后台自动刷新
-        self.is_running = True
         self.refresh_thread = threading.Thread(target=self._auto_refresh_worker, daemon=True)
         self.refresh_thread.start()
 
@@ -512,7 +513,7 @@ class DesktopTokenWidget:
     def _apply_topmost(self):
         """强制对操作系统声明 HWND_TOPMOST / HWND_NOTOPMOST，并深度加固 Win32 窗口 Z 序"""
         is_top = self.config.get("topmost", True)
-        if not self.is_window_visible:
+        if not getattr(self, "is_window_visible", True):
             return
 
         # 1. Tkinter 原生属性声明
@@ -547,9 +548,9 @@ class DesktopTokenWidget:
 
     def _schedule_topmost_keepalive(self):
         """周期性置顶保活心跳（每 2 秒检测加固一次，彻底解决长时间休眠、锁屏唤醒、Win+D导致的Z序重置）"""
-        if not self.is_running:
+        if not getattr(self, "is_running", True):
             return
-        if self.is_window_visible and self.config.get("topmost", True):
+        if getattr(self, "is_window_visible", True) and self.config.get("topmost", True):
             self._apply_topmost()
         # 持续调度下一次保活心跳
         self.root.after(2000, self._schedule_topmost_keepalive)
