@@ -32,15 +32,32 @@ AGY_MODEL_MAP = {
     1300: "Gemini 3.7 Pro",
     1318: "Gemini 3.8 Flash",
     1319: "Gemini 3.8 Flash",
+    1320: "Gemini 3.8 Pro",
+    1417: "Gemini 4 Argon",
+    1418: "Gemini 4 Argon",
+    1419: "Gemini 4 Argon",
+    1420: "Gemini 4 Argon",
+    1421: "Gemini 4 Argon",
 }
 
 USD_TO_CNY = 7.25
 
 def normalize_model_name(name: str) -> str:
-    """归一化模型名称，剔除 (High)/(Low) 思考强度后缀并规范化命名"""
+    """归一化模型名称，剔除 (High)/(Low)/(Medium) 思考强度后缀并规范化命名"""
     if not name:
         return ""
     s = str(name).strip()
+    s_lower = s.lower()
+    if "argon" in s_lower or "gemini-4" in s_lower or "gemini 4" in s_lower:
+        return "Gemini 4 Argon"
+    if "3.8" in s and "flash" in s_lower:
+        return "Gemini 3.8 Flash"
+    if "3.8" in s and "pro" in s_lower:
+        return "Gemini 3.8 Pro"
+    if "3.7" in s and "flash" in s_lower:
+        return "Gemini 3.7 Flash"
+    if "3.7" in s and "pro" in s_lower:
+        return "Gemini 3.7 Pro"
     if s in ("Gemini 3.8 Flash (High)", "Gemini 3.8 Flash (Low)"):
         return "Gemini 3.8 Flash"
     if s in ("Gemini 3.7 Flash (High)", "Gemini 3.7 Flash (Low)"):
@@ -50,7 +67,10 @@ def normalize_model_name(name: str) -> str:
 # 官方公开标准 API 单价 (单位: 美元 / 每 1,000,000 Tokens)
 # uncached: 未缓存输入单价, cached: 缓存命中输入单价, output: 输出单价 (含思考Token)
 MODEL_PRICING = {
-    # --- Google Gemini 系列 (Antigravity) ---
+    # --- Google Gemini 系列 (Antigravity & OpenCode) ---
+    "Gemini 4 Argon":          {"uncached": 2.00, "cached": 0.10, "output": 10.00, "currency": "USD"},
+    "gemini-4-argon":          {"uncached": 2.00, "cached": 0.10, "output": 10.00, "currency": "USD"},
+    "Gemini 3.8 Pro":          {"uncached": 1.25, "cached": 0.3125, "output": 5.00, "currency": "USD"},
     "Gemini 3.8 Flash":        {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
     "Gemini 3.7 Flash":        {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
     "Gemini 2.0 Flash":        {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
@@ -59,6 +79,12 @@ MODEL_PRICING = {
     "Gemini 2.0 Pro":          {"uncached": 1.25, "cached": 0.3125, "output": 5.00, "currency": "USD"},
     "Gemini 1.5 Pro":          {"uncached": 1.25, "cached": 0.3125, "output": 5.00, "currency": "USD"},
     # 兼容历史缓存数据的旧键
+    "Gemini 4 Argon (High)":   {"uncached": 2.00, "cached": 0.10, "output": 10.00, "currency": "USD"},
+    "Gemini 4 Argon (Medium)": {"uncached": 2.00, "cached": 0.10, "output": 10.00, "currency": "USD"},
+    "Gemini 4 Argon (Low)":    {"uncached": 2.00, "cached": 0.10, "output": 10.00, "currency": "USD"},
+    "gemini-4-argon-high":     {"uncached": 2.00, "cached": 0.10, "output": 10.00, "currency": "USD"},
+    "gemini-4-argon-medium":   {"uncached": 2.00, "cached": 0.10, "output": 10.00, "currency": "USD"},
+    "gemini-4-argon-low":      {"uncached": 2.00, "cached": 0.10, "output": 10.00, "currency": "USD"},
     "Gemini 3.8 Flash (High)": {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
     "Gemini 3.8 Flash (Low)":  {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
     "Gemini 3.7 Flash (High)": {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"},
@@ -102,7 +128,9 @@ def get_pricing_for_model(model_name: str) -> dict:
         return MODEL_PRICING[model_name]
     
     m_lower = model_name.lower()
-    if "flash" in m_lower or "luna" in m_lower or "mini" in m_lower:
+    if "argon" in m_lower:
+        return {"uncached": 2.00, "cached": 0.10, "output": 10.00, "currency": "USD"}
+    elif "flash" in m_lower or "luna" in m_lower or "mini" in m_lower:
         return {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"}
     elif "pro" in m_lower or "astra" in m_lower or "reasoner" in m_lower or "r1" in m_lower:
         return {"uncached": 2.50, "cached": 0.625, "output": 10.00, "currency": "USD"}

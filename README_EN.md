@@ -103,7 +103,9 @@ flowchart TD
 
 | Platform | Model Name | Uncached Input | Cache Read | Output (incl. Thinking) | Notes & Highlights |
 | :--- | :--- | :---: | :---: | :---: | :--- |
-| **Google Antigravity** | `Gemini 3.8 Flash` | \$0.10 | \$0.025 | \$0.40 | Next-gen high-throughput flagship (all thinking budgets) |
+| **Google Antigravity** | `Gemini 4 Argon` | \$2.00 | \$0.10 | \$10.00 | Next-gen frontier reasoning flagship (launch promo) |
+| | `Gemini 3.8 Pro` | \$1.25 | \$0.3125 | \$5.00 | 3.8 top-tier deep reasoning & architecture |
+| | `Gemini 3.8 Flash` | \$0.10 | \$0.025 | \$0.40 | Next-gen high-throughput flagship (all thinking budgets) |
 | | `Gemini 3.7 Flash` | \$0.10 | \$0.025 | \$0.40 | 3.7 hybrid reasoning speed edition |
 | | `Gemini 2.0 Flash` | \$0.10 | \$0.025 | \$0.40 | 2.0 multimodal speed flagship |
 | | `Gemini 1.5 Flash` | \$0.075 | \$0.01875 | \$0.30 | High efficiency lightweight model |
@@ -134,6 +136,7 @@ flowchart TD
 
 ### 3. Fallback Heuristics for Custom Models
 When encountering unlisted or custom fine-tuned model identifiers, the system infers tier pricing automatically:
+- Names containing `argon`: \$2.00 Uncached / \$0.10 Cached / \$10.00 Output
 - Names containing `flash`, `luna`, `mini`: \$0.10 Uncached / \$0.025 Cached / \$0.40 Output
 - Names containing `pro`, `astra`, `reasoner`, `r1`: \$2.50 Uncached / \$0.625 Cached / \$10.00 Output
 - Unrecognized models: Safe default of \$1.00 Uncached / \$0.25 Cached / \$4.00 Output
