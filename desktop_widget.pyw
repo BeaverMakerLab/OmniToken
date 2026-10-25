@@ -108,6 +108,7 @@ class DesktopTokenWidget:
         self.config = load_config()
         self.is_window_visible = True
         self.is_running = True
+        self.is_menu_open = False
         self._hide_notified = False
         self.tray_icon = None
 
@@ -494,9 +495,42 @@ class DesktopTokenWidget:
         menu.add_command(label="🚀 开机自启动开关...", command=self._setup_autostart_dialog)
         menu.add_command(label="❌ 彻底退出程序", command=self.quit_application)
 
-        menu.tk_popup(event.x_root, event.y_root)
-        # 上下文菜单弹出并交互/关闭后，延迟 100ms 加固置顶，解决 tk_popup 导致的 Z 序丢失
-        self.root.after(100, self._apply_topmost)
+        # 标记菜单已处于激活弹出态，彻底阻断 keepalive 周期心跳与底层置顶重排抢占
+        self.is_menu_open = True
+        self.root.focus_force()
+
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id()) or self.root.winfo_id()
+                ctypes.windll.user32.SetForegroundWindow(hwnd)
+            except Exception:
+                pass
+
+        # 确保 Win32 原生右键弹出菜单 (#32768) 强制置于 HWND_TOPMOST 顶层之巅
+        def _ensure_menu_topmost():
+            if sys.platform == "win32" and getattr(self, "is_menu_open", False):
+                try:
+                    import ctypes
+                    menu_hwnd = ctypes.windll.user32.FindWindowW("#32768", None)
+                    if menu_hwnd:
+                        ctypes.windll.user32.SetWindowPos(menu_hwnd, -1, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0040)
+                except Exception:
+                    pass
+
+        self.root.after(10, _ensure_menu_topmost)
+        self.root.after(40, _ensure_menu_topmost)
+
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.is_menu_open = False
+            try:
+                menu.grab_release()
+            except Exception:
+                pass
+            # 上下文菜单完全交互/关闭后，延迟 100ms 再加固主窗口自身置顶
+            self.root.after(100, self._apply_topmost)
 
     def _set_preset_size(self, w, h):
         self.root.geometry(f"{w}x{h}")
@@ -512,6 +546,10 @@ class DesktopTokenWidget:
 
     def _apply_topmost(self):
         """强制对操作系统声明 HWND_TOPMOST / HWND_NOTOPMOST，并深度加固 Win32 窗口 Z 序"""
+        # 如果右键上下文菜单正在显示，绝对不可重排主窗口 Z 序，否则会导致主窗口覆盖菜单
+        if getattr(self, "is_menu_open", False):
+            return
+
         is_top = self.config.get("topmost", True)
         if not getattr(self, "is_window_visible", True):
             return
@@ -550,8 +588,9 @@ class DesktopTokenWidget:
         """周期性置顶保活心跳（每 2 秒检测加固一次，彻底解决长时间休眠、锁屏唤醒、Win+D导致的Z序重置）"""
         if not getattr(self, "is_running", True):
             return
-        if getattr(self, "is_window_visible", True) and self.config.get("topmost", True):
-            self._apply_topmost()
+        if not getattr(self, "is_menu_open", False):
+            if getattr(self, "is_window_visible", True) and self.config.get("topmost", True):
+                self._apply_topmost()
         # 持续调度下一次保活心跳
         self.root.after(2000, self._schedule_topmost_keepalive)
 
