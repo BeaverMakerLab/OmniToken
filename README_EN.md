@@ -127,15 +127,27 @@ flowchart TD
 | | `deepseek-flash` / `v4-flash` | \$0.14 | \$0.014 | \$0.28 | Ultra-low cache pricing speed model |
 | | `deepseek-reasoner` (R1) | \$0.55 | \$0.14 | \$2.19 | Open reasoning long chain-of-thought |
 | | `deepseek-r1` / `v4-pro` | \$0.55 | \$0.14 | \$2.19 | Next-gen large-parameter reasoning |
-| **OpenCode AI** | `claude-opus-4-7` | \$15.00 | \$3.75 | \$75.00 | Premier architectural design & refactoring |
-| | `claude-3-7-sonnet` | \$3.00 | \$0.75 | \$15.00 | Hybrid thinking & software development |
-| | `claude-3-5-sonnet` | \$3.00 | \$0.75 | \$15.00 | Gold-standard coding benchmark |
-| | `qwen3.7-max` (Tongyi) | \$2.50 | \$0.60 | \$10.00 | Flagship large-scale logic model |
+| **Anthropic Claude** | `Claude Fable 5.1` | \$10.00 | \$0.25 | \$50.00 | 5.1 Top-tier reasoning/agentic flagship (low cache read) |
+| | `Claude Fable 5` | \$10.00 | \$1.00 | \$50.00 | Generation 5 deep reasoning agent model |
+| | `Claude Opus 5.5` | \$4.00 | \$0.20 | \$20.00 | 5.5 High-efficiency architecture & code flagship |
+| | `Claude Opus 5` | \$5.00 | \$0.50 | \$25.00 | Generation 5 long-horizon knowledge & refactoring |
+| | `Claude Opus 4.7` / `3 Opus` | \$15.00 | \$1.50 | \$75.00 | Classic premier deep reasoning flagship |
+| | `Claude Sonnet 5.5` | \$2.00 | \$0.10 | \$10.00 | 5.5 Next-gen balanced software engineering workhorse |
+| | `Claude 3.7 Sonnet` | \$3.00 | \$0.30 | \$15.00 | Hybrid thinking & software development flagship |
+| | `Claude 3.5 Sonnet` | \$3.00 | \$0.30 | \$15.00 | Industry gold-standard coding benchmark |
+| | `Claude Haiku 5.5` | \$0.10 | \$0.01 | \$0.50 | 5.5 Ultra-high throughput & lowest cost |
+| | `Claude 3.5 Haiku` | \$0.80 | \$0.08 | \$4.00 | High-efficiency responsive lightweight model |
+| | `Claude 3 Haiku` | \$0.25 | \$0.025 | \$1.25 | Classic fast lightweight workhorse |
+| **OpenCode / Domestic Flagships** | `qwen3.7-max` (Tongyi) | \$2.50 | \$0.60 | \$10.00 | Flagship large-scale logic model |
 | | `glm-5.2` (Zhipu) | \$1.00 | \$0.20 | \$2.00 | High-performance cost-effective coding model |
 | | `minimax-m3` | \$1.00 | \$0.25 | \$4.00 | Long-context understanding model |
 
 ### 3. Fallback Heuristics for Custom Models
 When encountering unlisted or custom fine-tuned model identifiers, the system infers tier pricing automatically:
+- Names containing `fable`: \$10.00 Uncached / \$0.25 Cached / \$50.00 Output
+- Names containing `opus`: \$4.00 ~ \$15.00 tier (default fallback \$5.00 Uncached / \$0.50 Cached / \$25.00 Output)
+- Names containing `sonnet`: \$2.00 ~ \$3.00 tier (default fallback \$3.00 Uncached / \$0.30 Cached / \$15.00 Output)
+- Names containing `haiku`: \$0.10 ~ \$0.80 tier (default fallback \$0.80 Uncached / \$0.08 Cached / \$4.00 Output)
 - Names containing `argon`: \$2.00 Uncached / \$0.10 Cached / \$10.00 Output
 - Names containing `flash`, `luna`, `mini`: \$0.10 Uncached / \$0.025 Cached / \$0.40 Output
 - Names containing `pro`, `astra`, `reasoner`, `r1`: \$2.50 Uncached / \$0.625 Cached / \$10.00 Output

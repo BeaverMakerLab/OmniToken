@@ -43,11 +43,13 @@ AGY_MODEL_MAP = {
 USD_TO_CNY = 7.25
 
 def normalize_model_name(name: str) -> str:
-    """归一化模型名称，剔除 (High)/(Low)/(Medium) 思考强度后缀并规范化命名"""
+    """归一化模型名称，剔除思考强度后缀与日期戳并规范化命名 (支持 Gemini, Claude 等)"""
     if not name:
         return ""
     s = str(name).strip()
     s_lower = s.lower()
+
+    # --- Google Gemini 系列 ---
     if "argon" in s_lower or "gemini-4" in s_lower or "gemini 4" in s_lower:
         return "Gemini 4 Argon"
     if "3.8" in s and "flash" in s_lower:
@@ -62,6 +64,50 @@ def normalize_model_name(name: str) -> str:
         return "Gemini 3.8 Flash"
     if s in ("Gemini 3.7 Flash (High)", "Gemini 3.7 Flash (Low)"):
         return "Gemini 3.7 Flash"
+
+    # --- Anthropic Claude 系列 (剔除日期后缀避免误判如 2024、2025 年份中的数字) ---
+    s_clean = re.sub(r'[-_]202\d{5}', '', s_lower)
+    if "fable" in s_clean:
+        if "5.1" in s_clean or "5-1" in s_clean:
+            return "Claude Fable 5.1"
+        return "Claude Fable 5"
+    if "opus" in s_clean:
+        if "5.5" in s_clean or "5-5" in s_clean:
+            return "Claude Opus 5.5"
+        if "5" in s_clean:
+            return "Claude Opus 5"
+        if "4.7" in s_clean or "4-7" in s_clean or "4" in s_clean:
+            return "Claude Opus 4.7"
+        if "3" in s_clean:
+            return "Claude 3 Opus"
+        return "Claude Opus 5.5"
+    if "sonnet" in s_clean:
+        if "5.5" in s_clean or "5-5" in s_clean or "5" in s_clean:
+            if "3" not in s_clean:
+                return "Claude Sonnet 5.5"
+        if "3.7" in s_clean or "3-7" in s_clean:
+            return "Claude 3.7 Sonnet"
+        if "3.5" in s_clean or "3-5" in s_clean:
+            return "Claude 3.5 Sonnet"
+        if "3" in s_clean:
+            return "Claude 3 Sonnet"
+        return "Claude 3.7 Sonnet"
+    if "haiku" in s_clean:
+        if "5.5" in s_clean or "5-5" in s_clean or "5" in s_clean:
+            if "3" not in s_clean:
+                return "Claude Haiku 5.5"
+        if "3.5" in s_clean or "3-5" in s_clean:
+            return "Claude 3.5 Haiku"
+        if "3" in s_clean:
+            return "Claude 3 Haiku"
+        return "Claude 3.5 Haiku"
+    if "instant" in s_clean:
+        return "Claude Instant 1.2"
+    if "claude-2" in s_clean or "claude 2" in s_clean:
+        return "Claude 2.1"
+    if s_clean == "claude":
+        return "Claude 3.7 Sonnet"
+
     return s
 
 # 官方公开标准 API 单价 (单位: 美元 / 每 1,000,000 Tokens)
@@ -111,13 +157,67 @@ MODEL_PRICING = {
     "deepseek-reasoner": {"uncached": 0.55, "cached": 0.14, "output": 2.19, "currency": "USD"},
     "deepseek-r1":       {"uncached": 0.55, "cached": 0.14, "output": 2.19, "currency": "USD"},
 
-    # --- OpenCode 多模型接入 (国产模型 & 国际通用) ---
+    # --- OpenCode / 通用国产旗舰 ---
     "glm-5.2":           {"uncached": 1.00, "cached": 0.20, "output": 2.00, "currency": "USD"},
     "qwen3.7-max":       {"uncached": 2.50, "cached": 0.60, "output": 10.00, "currency": "USD"},
     "minimax-m3":        {"uncached": 1.00, "cached": 0.25, "output": 4.00, "currency": "USD"},
-    "claude-opus-4-7":   {"uncached": 15.00, "cached": 3.75, "output": 75.00, "currency": "USD"},
-    "claude-3-7-sonnet": {"uncached": 3.00, "cached": 0.75, "output": 15.00, "currency": "USD"},
-    "claude-3-5-sonnet": {"uncached": 3.00, "cached": 0.75, "output": 15.00, "currency": "USD"},
+
+    # --- Anthropic Claude 系列 (全代际完整官方阶梯单价) ---
+    # Fable 系列 (顶级前沿长思维链推理与智能体旗舰)
+    "Claude Fable 5.1":        {"uncached": 10.00, "cached": 0.25,  "output": 50.00, "currency": "USD"},
+    "claude-fable-5.1":        {"uncached": 10.00, "cached": 0.25,  "output": 50.00, "currency": "USD"},
+    "claude-fable-5-1":        {"uncached": 10.00, "cached": 0.25,  "output": 50.00, "currency": "USD"},
+    "Claude Fable 5":          {"uncached": 10.00, "cached": 1.00,  "output": 50.00, "currency": "USD"},
+    "claude-fable-5":          {"uncached": 10.00, "cached": 1.00,  "output": 50.00, "currency": "USD"},
+    "claude-fable":            {"uncached": 10.00, "cached": 1.00,  "output": 50.00, "currency": "USD"},
+
+    # Opus 系列 (顶尖架构设计、深度推演与代码重构旗舰)
+    "Claude Opus 5.5":         {"uncached": 4.00,  "cached": 0.20,  "output": 20.00, "currency": "USD"},
+    "claude-opus-5.5":         {"uncached": 4.00,  "cached": 0.20,  "output": 20.00, "currency": "USD"},
+    "claude-opus-5-5":         {"uncached": 4.00,  "cached": 0.20,  "output": 20.00, "currency": "USD"},
+    "Claude Opus 5":           {"uncached": 5.00,  "cached": 0.50,  "output": 25.00, "currency": "USD"},
+    "claude-opus-5":           {"uncached": 5.00,  "cached": 0.50,  "output": 25.00, "currency": "USD"},
+    "Claude Opus 4.7":         {"uncached": 15.00, "cached": 1.50,  "output": 75.00, "currency": "USD"},
+    "claude-opus-4-7":         {"uncached": 15.00, "cached": 1.50,  "output": 75.00, "currency": "USD"},
+    "claude-opus-4.7":         {"uncached": 15.00, "cached": 1.50,  "output": 75.00, "currency": "USD"},
+    "Claude 3 Opus":           {"uncached": 15.00, "cached": 1.50,  "output": 75.00, "currency": "USD"},
+    "claude-3-opus":           {"uncached": 15.00, "cached": 1.50,  "output": 75.00, "currency": "USD"},
+    "claude-3-opus-20240229":  {"uncached": 15.00, "cached": 1.50,  "output": 75.00, "currency": "USD"},
+
+    # Sonnet 系列 (主力均衡与代码基准旗舰)
+    "Claude Sonnet 5.5":       {"uncached": 2.00,  "cached": 0.10,  "output": 10.00, "currency": "USD"},
+    "claude-sonnet-5.5":       {"uncached": 2.00,  "cached": 0.10,  "output": 10.00, "currency": "USD"},
+    "claude-sonnet-5-5":       {"uncached": 2.00,  "cached": 0.10,  "output": 10.00, "currency": "USD"},
+    "Claude 3.7 Sonnet":       {"uncached": 3.00,  "cached": 0.30,  "output": 15.00, "currency": "USD"},
+    "claude-3-7-sonnet":       {"uncached": 3.00,  "cached": 0.30,  "output": 15.00, "currency": "USD"},
+    "claude-3.7-sonnet":       {"uncached": 3.00,  "cached": 0.30,  "output": 15.00, "currency": "USD"},
+    "claude-3-7-sonnet-20250219": {"uncached": 3.00, "cached": 0.30, "output": 15.00, "currency": "USD"},
+    "Claude 3.5 Sonnet":       {"uncached": 3.00,  "cached": 0.30,  "output": 15.00, "currency": "USD"},
+    "claude-3-5-sonnet":       {"uncached": 3.00,  "cached": 0.30,  "output": 15.00, "currency": "USD"},
+    "claude-3.5-sonnet":       {"uncached": 3.00,  "cached": 0.30,  "output": 15.00, "currency": "USD"},
+    "claude-3-5-sonnet-20241022": {"uncached": 3.00, "cached": 0.30, "output": 15.00, "currency": "USD"},
+    "claude-3-5-sonnet-20240620": {"uncached": 3.00, "cached": 0.30, "output": 15.00, "currency": "USD"},
+    "Claude 3 Sonnet":         {"uncached": 3.00,  "cached": 0.30,  "output": 15.00, "currency": "USD"},
+    "claude-3-sonnet":         {"uncached": 3.00,  "cached": 0.30,  "output": 15.00, "currency": "USD"},
+    "claude-3-sonnet-20240229": {"uncached": 3.00, "cached": 0.30, "output": 15.00, "currency": "USD"},
+
+    # Haiku 系列 (极速轻量吞吐)
+    "Claude Haiku 5.5":        {"uncached": 0.10,  "cached": 0.01,  "output": 0.50,  "currency": "USD"},
+    "claude-haiku-5.5":        {"uncached": 0.10,  "cached": 0.01,  "output": 0.50,  "currency": "USD"},
+    "claude-haiku-5-5":        {"uncached": 0.10,  "cached": 0.01,  "output": 0.50,  "currency": "USD"},
+    "Claude 3.5 Haiku":        {"uncached": 0.80,  "cached": 0.08,  "output": 4.00,  "currency": "USD"},
+    "claude-3-5-haiku":        {"uncached": 0.80,  "cached": 0.08,  "output": 4.00,  "currency": "USD"},
+    "claude-3.5-haiku":        {"uncached": 0.80,  "cached": 0.08,  "output": 4.00,  "currency": "USD"},
+    "claude-3-5-haiku-20241022": {"uncached": 0.80, "cached": 0.08, "output": 4.00, "currency": "USD"},
+    "Claude 3 Haiku":          {"uncached": 0.25,  "cached": 0.025, "output": 1.25,  "currency": "USD"},
+    "claude-3-haiku":          {"uncached": 0.25,  "cached": 0.025, "output": 1.25,  "currency": "USD"},
+    "claude-3-haiku-20240307": {"uncached": 0.25,  "cached": 0.025, "output": 1.25,  "currency": "USD"},
+
+    # 经典与轻量历史版本
+    "Claude 2.1":              {"uncached": 8.00,  "cached": 2.00,  "output": 24.00, "currency": "USD"},
+    "claude-2.1":              {"uncached": 8.00,  "cached": 2.00,  "output": 24.00, "currency": "USD"},
+    "Claude Instant 1.2":      {"uncached": 0.80,  "cached": 0.20,  "output": 2.40,  "currency": "USD"},
+    "claude-instant-1.2":      {"uncached": 0.80,  "cached": 0.20,  "output": 2.40,  "currency": "USD"},
 }
 
 def get_pricing_for_model(model_name: str) -> dict:
@@ -128,7 +228,21 @@ def get_pricing_for_model(model_name: str) -> dict:
         return MODEL_PRICING[model_name]
     
     m_lower = model_name.lower()
-    if "argon" in m_lower:
+    if "fable" in m_lower:
+        return {"uncached": 10.00, "cached": 0.25, "output": 50.00, "currency": "USD"}
+    elif "opus" in m_lower:
+        if "5" in m_lower:
+            return {"uncached": 4.00, "cached": 0.20, "output": 20.00, "currency": "USD"}
+        return {"uncached": 15.00, "cached": 1.50, "output": 75.00, "currency": "USD"}
+    elif "sonnet" in m_lower:
+        if "5" in m_lower:
+            return {"uncached": 2.00, "cached": 0.10, "output": 10.00, "currency": "USD"}
+        return {"uncached": 3.00, "cached": 0.30, "output": 15.00, "currency": "USD"}
+    elif "haiku" in m_lower:
+        if "5" in m_lower:
+            return {"uncached": 0.10, "cached": 0.01, "output": 0.50, "currency": "USD"}
+        return {"uncached": 0.80, "cached": 0.08, "output": 4.00, "currency": "USD"}
+    elif "argon" in m_lower:
         return {"uncached": 2.00, "cached": 0.10, "output": 10.00, "currency": "USD"}
     elif "flash" in m_lower or "luna" in m_lower or "mini" in m_lower:
         return {"uncached": 0.10, "cached": 0.025, "output": 0.40, "currency": "USD"}
