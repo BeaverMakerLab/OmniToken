@@ -23,21 +23,53 @@ except ImportError:
 UUID_PATTERN = re.compile(r"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})")
 
 AGY_MODEL_MAP = {
+    # --- Google Gemini 系列 ---
     1016: "Gemini 1.5 Pro",
     1026: "Gemini 1.5 Flash",
     1036: "Gemini 2.0 Flash",
     1050: "Gemini 2.0 Pro",
+    1059: "Gemini 3.1 Flash",
+    1196: "Gemini 3.6 Flash",
     1298: "Gemini 3.7 Flash",
     1299: "Gemini 3.7 Flash",
     1300: "Gemini 3.7 Pro",
     1318: "Gemini 3.8 Flash",
     1319: "Gemini 3.8 Flash",
     1320: "Gemini 3.8 Pro",
+    1322: "Gemini 3.8 Flash",
     1417: "Gemini 4 Argon",
     1418: "Gemini 4 Argon",
     1419: "Gemini 4 Argon",
     1420: "Gemini 4 Argon",
     1421: "Gemini 4 Argon",
+
+    # --- Anthropic Claude 系列 (Google Antigravity 官方内置与调度模型) ---
+    # Claude Opus 5.5 (low: 1400, medium: 1401, high: 1402, max: 1406, default: 1368)
+    1368: "Claude Opus 5.5",
+    1400: "Claude Opus 5.5",
+    1401: "Claude Opus 5.5",
+    1402: "Claude Opus 5.5",
+    1406: "Claude Opus 5.5",
+
+    # Claude Sonnet 5.5 (low: 1403, medium: 1404, high: 1405, max: 1407)
+    1403: "Claude Sonnet 5.5",
+    1404: "Claude Sonnet 5.5",
+    1405: "Claude Sonnet 5.5",
+    1407: "Claude Sonnet 5.5",
+
+    # Claude 4 / 4.5 / 4.6 / 4.8 架构
+    281:  "Claude 4 Sonnet",
+    282:  "Claude 4 Sonnet",
+    290:  "Claude 4 Opus",
+    291:  "Claude 4 Opus",
+    333:  "Claude 4.5 Sonnet",
+    334:  "Claude 4.5 Sonnet",
+    340:  "Claude 4.5 Haiku",
+    341:  "Claude 4.5 Haiku",
+    1011: "Claude Opus 4.5",
+    1012: "Claude Opus 4.5",
+    1035: "Claude Sonnet 4.6",
+    1254: "Claude Opus 4.8",
 }
 
 USD_TO_CNY = 7.25
@@ -76,15 +108,28 @@ def normalize_model_name(name: str) -> str:
             return "Claude Opus 5.5"
         if "5" in s_clean:
             return "Claude Opus 5"
-        if "4.7" in s_clean or "4-7" in s_clean or "4" in s_clean:
+        if "4.8" in s_clean or "4-8" in s_clean:
+            return "Claude Opus 4.8"
+        if "4.7" in s_clean or "4-7" in s_clean:
             return "Claude Opus 4.7"
+        if "4.5" in s_clean or "4-5" in s_clean:
+            return "Claude Opus 4.5"
+        if "4" in s_clean:
+            return "Claude 4 Opus"
         if "3" in s_clean:
             return "Claude 3 Opus"
         return "Claude Opus 5.5"
     if "sonnet" in s_clean:
-        if "5.5" in s_clean or "5-5" in s_clean or "5" in s_clean:
-            if "3" not in s_clean:
-                return "Claude Sonnet 5.5"
+        if "5.5" in s_clean or "5-5" in s_clean:
+            return "Claude Sonnet 5.5"
+        if "5" in s_clean:
+            return "Claude Sonnet 5.5"
+        if "4.6" in s_clean or "4-6" in s_clean:
+            return "Claude Sonnet 4.6"
+        if "4.5" in s_clean or "4-5" in s_clean:
+            return "Claude 4.5 Sonnet"
+        if "4" in s_clean:
+            return "Claude 4 Sonnet"
         if "3.7" in s_clean or "3-7" in s_clean:
             return "Claude 3.7 Sonnet"
         if "3.5" in s_clean or "3-5" in s_clean:
@@ -94,8 +139,10 @@ def normalize_model_name(name: str) -> str:
         return "Claude 3.7 Sonnet"
     if "haiku" in s_clean:
         if "5.5" in s_clean or "5-5" in s_clean or "5" in s_clean:
-            if "3" not in s_clean:
+            if "3" not in s_clean and "4" not in s_clean:
                 return "Claude Haiku 5.5"
+        if "4.5" in s_clean or "4-5" in s_clean or "4" in s_clean:
+            return "Claude 4.5 Haiku"
         if "3.5" in s_clean or "3-5" in s_clean:
             return "Claude 3.5 Haiku"
         if "3" in s_clean:
@@ -177,9 +224,12 @@ MODEL_PRICING = {
     "claude-opus-5-5":         {"uncached": 4.00,  "cached": 0.20,  "output": 20.00, "currency": "USD"},
     "Claude Opus 5":           {"uncached": 5.00,  "cached": 0.50,  "output": 25.00, "currency": "USD"},
     "claude-opus-5":           {"uncached": 5.00,  "cached": 0.50,  "output": 25.00, "currency": "USD"},
+    "Claude Opus 4.8":         {"uncached": 15.00, "cached": 1.50,  "output": 75.00, "currency": "USD"},
     "Claude Opus 4.7":         {"uncached": 15.00, "cached": 1.50,  "output": 75.00, "currency": "USD"},
     "claude-opus-4-7":         {"uncached": 15.00, "cached": 1.50,  "output": 75.00, "currency": "USD"},
     "claude-opus-4.7":         {"uncached": 15.00, "cached": 1.50,  "output": 75.00, "currency": "USD"},
+    "Claude Opus 4.5":         {"uncached": 15.00, "cached": 1.50,  "output": 75.00, "currency": "USD"},
+    "Claude 4 Opus":           {"uncached": 15.00, "cached": 1.50,  "output": 75.00, "currency": "USD"},
     "Claude 3 Opus":           {"uncached": 15.00, "cached": 1.50,  "output": 75.00, "currency": "USD"},
     "claude-3-opus":           {"uncached": 15.00, "cached": 1.50,  "output": 75.00, "currency": "USD"},
     "claude-3-opus-20240229":  {"uncached": 15.00, "cached": 1.50,  "output": 75.00, "currency": "USD"},
@@ -188,6 +238,9 @@ MODEL_PRICING = {
     "Claude Sonnet 5.5":       {"uncached": 2.00,  "cached": 0.10,  "output": 10.00, "currency": "USD"},
     "claude-sonnet-5.5":       {"uncached": 2.00,  "cached": 0.10,  "output": 10.00, "currency": "USD"},
     "claude-sonnet-5-5":       {"uncached": 2.00,  "cached": 0.10,  "output": 10.00, "currency": "USD"},
+    "Claude Sonnet 4.6":       {"uncached": 3.00,  "cached": 0.30,  "output": 15.00, "currency": "USD"},
+    "Claude 4.5 Sonnet":       {"uncached": 3.00,  "cached": 0.30,  "output": 15.00, "currency": "USD"},
+    "Claude 4 Sonnet":         {"uncached": 3.00,  "cached": 0.30,  "output": 15.00, "currency": "USD"},
     "Claude 3.7 Sonnet":       {"uncached": 3.00,  "cached": 0.30,  "output": 15.00, "currency": "USD"},
     "claude-3-7-sonnet":       {"uncached": 3.00,  "cached": 0.30,  "output": 15.00, "currency": "USD"},
     "claude-3.7-sonnet":       {"uncached": 3.00,  "cached": 0.30,  "output": 15.00, "currency": "USD"},
@@ -205,6 +258,7 @@ MODEL_PRICING = {
     "Claude Haiku 5.5":        {"uncached": 0.10,  "cached": 0.01,  "output": 0.50,  "currency": "USD"},
     "claude-haiku-5.5":        {"uncached": 0.10,  "cached": 0.01,  "output": 0.50,  "currency": "USD"},
     "claude-haiku-5-5":        {"uncached": 0.10,  "cached": 0.01,  "output": 0.50,  "currency": "USD"},
+    "Claude 4.5 Haiku":        {"uncached": 0.80,  "cached": 0.08,  "output": 4.00,  "currency": "USD"},
     "Claude 3.5 Haiku":        {"uncached": 0.80,  "cached": 0.08,  "output": 4.00,  "currency": "USD"},
     "claude-3-5-haiku":        {"uncached": 0.80,  "cached": 0.08,  "output": 4.00,  "currency": "USD"},
     "claude-3.5-haiku":        {"uncached": 0.80,  "cached": 0.08,  "output": 4.00,  "currency": "USD"},

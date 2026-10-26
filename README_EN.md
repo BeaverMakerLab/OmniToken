@@ -107,6 +107,7 @@ flowchart TD
 | | `Gemini 3.8 Pro` | \$1.25 | \$0.3125 | \$5.00 | 3.8 top-tier deep reasoning & architecture |
 | | `Gemini 3.8 Flash` | \$0.10 | \$0.025 | \$0.40 | Next-gen high-throughput flagship (all thinking budgets) |
 | | `Gemini 3.7 Flash` | \$0.10 | \$0.025 | \$0.40 | 3.7 hybrid reasoning speed edition |
+| | `Claude Opus 5.5 / Sonnet 5.5` | Dynamic Match | Dynamic Match | Dynamic Match | Natively resolved from AGY internal binary & dispatch enums |
 | | `Gemini 2.0 Flash` | \$0.10 | \$0.025 | \$0.40 | 2.0 multimodal speed flagship |
 | | `Gemini 1.5 Flash` | \$0.075 | \$0.01875 | \$0.30 | High efficiency lightweight model |
 | | `Gemini 3.7 Pro` | \$1.25 | \$0.3125 | \$5.00 | Deep reasoning & coding flagship |
