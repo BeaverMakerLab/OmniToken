@@ -474,10 +474,15 @@ def scan_antigravity(gemini_dir: str, start_ts: float, end_ts: float):
                     cs["cand_out"] += cand_out
                     cs["thinking"] += thinking
                     cs["text_out"] += text_out
+                    norm_m = normalize_model_name(model_name)
+                    if "models" not in cs:
+                        cs["models"] = []
+                    if norm_m not in cs["models"]:
+                        cs["models"].append(norm_m)
                     cs["client"] = "Antigravity"
                     cs["app"] = app
                     cs["title"] = title
-                    cs["model"] = model_name
+                    cs["model"] = norm_m
                     cs["cost_usd"] += cost_usd
             conn.close()
         except Exception:
@@ -642,9 +647,14 @@ def scan_codex(codex_dir: str, start_ts: float, end_ts: float):
                         cs["cand_out"] += output_tokens
                         cs["thinking"] += thinking
                         cs["text_out"] += text_out
+                        norm_m = normalize_model_name(current_model)
+                        if "models" not in cs:
+                            cs["models"] = []
+                        if norm_m not in cs["models"]:
+                            cs["models"].append(norm_m)
                         cs["client"] = "Codex"
                         cs["app"] = "CLI"
-                        cs["model"] = current_model
+                        cs["model"] = norm_m
                         cs["title"] = current_title
                         cs["cost_usd"] += cost_usd
         except Exception:
@@ -830,7 +840,12 @@ def scan_deepseek(dsh_dir: str, start_ts: float, end_ts: float):
                 cs["cand_out"] += output_tokens
                 cs["thinking"] += thinking
                 cs["text_out"] += text_out
-                cs["model"] = model_name
+                norm_m = normalize_model_name(model_name)
+                if "models" not in cs:
+                    cs["models"] = []
+                if norm_m not in cs["models"]:
+                    cs["models"].append(norm_m)
+                cs["model"] = norm_m
                 cs["title"] = current_title
                 cs["client"] = "DeepSeek"
                 cs["app"] = "Harness"
@@ -974,9 +989,14 @@ def scan_opencode(opencode_db=None, start_ts=0, end_ts=9999999999):
                 cs["cand_out"] += c_out
                 cs["thinking"] += thinking
                 cs["text_out"] += c_out
+                norm_m = normalize_model_name(m_name)
+                if "models" not in cs:
+                    cs["models"] = []
+                if norm_m not in cs["models"]:
+                    cs["models"].append(norm_m)
                 cs["client"] = "OpenCode"
                 cs["app"] = "OpenCode"
-                cs["model"] = m_name
+                cs["model"] = norm_m
                 cs["title"] = s_info["title"]
                 cs["cost_usd"] += cost_usd
             except Exception:
@@ -1083,10 +1103,12 @@ def aggregate_data(records, convo_stats, default_client=""):
             else:
                 client = app_val or "未知"
 
+        models_list = s.get("models", [])
+        m_display = " / ".join(models_list) if len(models_list) > 1 else normalize_model_name(s.get("model", ""))
         item = {
             "id": cid,
             "title": s.get("title", cid),
-            "model": normalize_model_name(s.get("model", "")),
+            "model": m_display,
             "app": s.get("app", ""),
             "client": client,
             "calls": s["calls"],
@@ -1193,6 +1215,10 @@ def merge_convo_stats(hist_convos, today_convos):
         m["text_out"] += s.get("text_out", 0)
         m["cost_usd"] += s.get("cost_usd", 0.0)
         if s.get("title"): m["title"] = s["title"]
+        if "models" in s:
+            if "models" not in m: m["models"] = []
+            for mdl in s["models"]:
+                if mdl not in m["models"]: m["models"].append(mdl)
         if s.get("model"): m["model"] = normalize_model_name(s["model"])
         if s.get("client"): m["client"] = s["client"]
         if s.get("app"): m["app"] = s["app"]
@@ -1208,6 +1234,10 @@ def merge_convo_stats(hist_convos, today_convos):
         m["text_out"] += s.get("text_out", 0)
         m["cost_usd"] += s.get("cost_usd", 0.0)
         if s.get("title"): m["title"] = s["title"]
+        if "models" in s:
+            if "models" not in m: m["models"] = []
+            for mdl in s["models"]:
+                if mdl not in m["models"]: m["models"].append(mdl)
         if s.get("model"): m["model"] = normalize_model_name(s["model"])
         if s.get("client"): m["client"] = s["client"]
         if s.get("app"): m["app"] = s["app"]
